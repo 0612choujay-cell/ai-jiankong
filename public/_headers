@@ -1,0 +1,31 @@
+# Cloudflare Pages / Netlify 專屬的 header 設定檔（M-2：換成 nginx / GitHub Pages /
+# `python -m http.server` 這個檔案就是一個沒人讀的純文字檔，下面每一條都會靜默消失）。
+# 因為這個失效模式是靜默的，CSP 在 index.html 另有一份 <meta http-equiv> 備援，
+# 兩邊的 connect-src 必須一致——src/core/redlineGuardrail.test.js 鎖住這件事。
+#
+# Content-Security-Policy（Blocking B-1）：@mediapipe/tasks-vision@1.0.1 內建一支
+# 無法關閉的遙測通道，每 60 秒用原生 fetch() POST 到
+# https://odml.pa.googleapis.com/v1/log（vision_bundle.mjs 裡的 Fh class；
+# 全 bundle 搜 enableLogging / disableLogging / doNotTrack / optOut 全部 0 命中，
+# 沒有任何 opt-out 開關）。送出的內容不含影像／landmark／blendshape，但網路層
+# 必然帶走這台 iPad 的公網 IP 與 User-Agent——那讓 PrivacyNotice.vue 對家長說的
+# 「不會把任何資料傳出去」變成假話。
+#
+# 只寫 connect-src 這一條指令，刻意不寫 script-src / style-src：那兩條會牽動
+# Vite 產生的 inline script 與 style，風險遠大於收益，而這裡要解的是外送問題。
+# connect-src 管的正是 fetch()／XHR／WebSocket／sendBeacon／EventSource。
+#   'self'  → /wasm/*、/models/*、Service Worker 的同源 fetch、dev 期間的 HMR
+#             （CSP3 的 'self' 涵蓋同源的 ws:／wss:）全部照過。
+#   blob: data: → emscripten 取 wasm／建 worker 時可能走這兩種 URL，一併放行。
+#
+# ⚠ 未驗證的風險：CSP 會不會誤擋 MediaPipe 載入 wasm／模型，jsdom 測不出來，
+#   只能在 iPadOS Safari 真機上確認。展前檢查清單有對應的必做項目。
+/*
+  Permissions-Policy: camera=(self), microphone=()
+  Content-Security-Policy: connect-src 'self' blob: data:
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+/sw.js
+  Cache-Control: no-cache

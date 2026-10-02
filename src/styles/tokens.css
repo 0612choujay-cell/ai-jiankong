@@ -1,0 +1,22 @@
+:root {
+  --c-bg: #12131a;
+  --c-surface: #1e2029;
+  --c-text: #f2f3f7;
+  --c-text-dim: #b8bcc9;
+  --c-accent: #5ad1ff;
+  --c-hero: #4ade80;
+  --c-boss: #f472b6;
+  --c-warn: #fbbf24;
+  --c-danger: #fb7185;
+  --c-ok: #34d399;
+
+  --fs-body: 17px;
+  --fs-coach: 36px;
+  --fs-title: 28px;
+  --fs-number: 22px;
+
+  --tap-min: 44px;
+  --tap-primary: 60px;
+  --radius: 12px;
+  --gap: 16px;
+}

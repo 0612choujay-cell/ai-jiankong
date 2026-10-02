@@ -1,0 +1,28 @@
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; }
+body {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: var(--fs-body);
+  font-family: -apple-system, "PingFang TC", sans-serif;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+html, body { overflow-x: hidden; }
+/* 鏡頭畫面一律 cover，兩個方向都不得變形 */
+video { object-fit: cover; }
+button {
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  font-size: var(--fs-body);
+  border-radius: var(--radius);
+  border: 0;
+  color: var(--c-text);
+  background: var(--c-surface);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button.primary { min-height: var(--tap-primary); font-size: var(--fs-title); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}

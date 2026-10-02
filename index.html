@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!--
+      Blocking B-1：@mediapipe/tasks-vision@1.0.1 內建一支關不掉的遙測通道，
+      每 60 秒用原生 fetch() POST 到 Google 的 odml logging 端點（完整位址寫在
+      public/_headers 的註解裡——這個檔案會原樣送到每一位訪客的瀏覽器，而且是
+      egressGuardrail.test.js 的掃描範圍，不在這裡寫出 URL 字面值）。
+      connect-src 把它擋在瀏覽器層——不去 patch 那個 minified 的 vendored
+      bundle，因為下次 npm i 就沒了，而且沒有人會發現。
+
+      這一份跟 public/_headers 裡那一條是**同一條規則的兩個載體**，不是重複：
+      _headers 只有 Cloudflare Pages / Netlify 這類 host 會認，換個 host 就
+      靜默消失（M-2）；meta 版不依賴任何 host 設定，本機 dev（vite 不會送
+      _headers）與搬到任何靜態伺服器之後都還在。兩邊的值必須一致，
+      src/core/redlineGuardrail.test.js 鎖住這件事。
+
+      只寫 connect-src，刻意不寫 script-src / style-src：那兩條會牽動 Vite 的
+      inline script 與 style，風險遠大於收益。'self' 涵蓋 /wasm/*、/models/*、
+      Service Worker 的同源 fetch 與 dev 期間的 HMR；blob:／data: 是給
+      emscripten 取 wasm／建 worker 用的。
+
+      ⚠ 未驗證：CSP 會不會誤擋 MediaPipe 載入 wasm／模型，jsdom 測不出來，
+        只能在 iPadOS Safari 真機上確認（見展前檢查清單）。
+    -->
+    <meta http-equiv="Content-Security-Policy" content="connect-src 'self' blob: data:" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <title>專注討伐戰：分心大魔王</title>
+  </head>
+  <body>
+    <div id="app" data-app-root="focus-quest"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

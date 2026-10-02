@@ -1,0 +1,77 @@
+/* 直橫同等支援：兩個方向都是完整版面，沒有哪一個是降級遷就 */
+
+.stack {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap);
+  padding: max(var(--gap), env(safe-area-inset-top))
+           max(var(--gap), env(safe-area-inset-right))
+           max(var(--gap), env(safe-area-inset-bottom))
+           max(var(--gap), env(safe-area-inset-left));
+  text-align: center;
+}
+
+/* 對戰式分半版面 */
+.arena {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  gap: 0;
+  /* 攻擊特效的飛行向量，由方向決定；Task 14 的 keyframes 讀這兩個值。
+     這裡的值是 fallback，不代表「橫式優先」——兩個 orientation 媒體查詢
+     理論上必有一個命中，但留著這組基底值成本是零，用來防止極端情境
+     （例如列印、某些嵌入情境）兩個查詢都沒命中時變數變成 unset，
+     導致 Task 14 的攻擊特效完全不動。 */
+  --attack-dx: 100%;
+  --attack-dy: 0%;
+}
+
+/* 橫式：左半自己、右半魔王 */
+@media (orientation: landscape) {
+  .arena {
+    grid-template-columns: 1fr 1fr;
+    /* 顯式宣告列高，不依賴 align-content 的 stretch 預設行為
+       在 min-height 容器上的解讀——直接寫明，不用賭。 */
+    grid-template-rows: 1fr;
+    grid-template-areas: 'hero boss';
+    --attack-dx: 100%;
+    --attack-dy: 0%;
+  }
+}
+
+/* 直式：上半自己、下半魔王 */
+@media (orientation: portrait) {
+  .arena {
+    /* 與橫式對稱顯式宣告，避免日後維護者誤判哪一軸是特別處理過的 */
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+    grid-template-areas: 'hero' 'boss';
+    --attack-dx: 0%;
+    --attack-dy: 100%;
+  }
+}
+
+.arena__hero { grid-area: hero; position: relative; overflow: hidden; }
+.arena__boss { grid-area: boss; position: relative; overflow: hidden;
+               display: flex; align-items: center; justify-content: center; }
+
+/* 戰場帶：覆蓋在兩區交界，飛行特效與傷害數字都在這一層 */
+.arena__field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* 角落按鈕。用 safe-area 讓直式握持時不會壓到圓角與 Home indicator */
+.corner-tl, .corner-tr, .corner-bl, .corner-br {
+  position: absolute;
+  z-index: 3;
+}
+.corner-tl { top: max(var(--gap), env(safe-area-inset-top)); left: max(var(--gap), env(safe-area-inset-left)); }
+.corner-tr { top: max(var(--gap), env(safe-area-inset-top)); right: max(var(--gap), env(safe-area-inset-right)); }
+.corner-bl { bottom: max(var(--gap), env(safe-area-inset-bottom)); left: max(var(--gap), env(safe-area-inset-left)); }
+.corner-br { bottom: max(var(--gap), env(safe-area-inset-bottom)); right: max(var(--gap), env(safe-area-inset-right)); }
