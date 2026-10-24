@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 姿勢與專注監控</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #1c2330; --muted: #6b7686;
+    --ok: #1a9d62; --warn: #d9822b; --bad: #d64545; --accent: #2f6fed; --line: #e3e7ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #11151c; --card: #1a2029; --text: #e8ecf2; --muted: #93a0b2; --line: #2a323e;
+            --ok: #3ac98a; --warn: #f0a050; --bad: #ff6b6b; --accent: #6b9bff; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 4px 0 2px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  .grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .stage { position: relative; background: #000; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; }
+  video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+  .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+             color: #fff; text-align: center; padding: 20px; background: rgba(0,0,0,.55); }
+  .overlay[hidden] { display: none; }
+  .calmsg { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px; text-align: center; color: #fff;
+            font-weight: 600; background: rgba(47,111,237,.9); }
+  .calmsg[hidden] { display: none; }
+  .banner { position: absolute; left: 0; right: 0; top: 0; padding: 10px 14px; font-weight: 600;
+            color: #fff; background: var(--bad); text-align: center; }
+  .banner[hidden] { display: none; }
+  button { font: inherit; border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer;
+           background: var(--accent); color: #fff; }
+  button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  button:disabled { opacity: .45; cursor: default; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .metric { margin-bottom: 12px; }
+  .metric .top { display: flex; justify-content: space-between; align-items: baseline; }
+  .metric .name { color: var(--muted); font-size: 13px; }
+  .metric .val { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; margin-top: 4px; position: relative; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--ok); width: 0; transition: width .15s, background .15s; }
+  .status { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .focus { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  label { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); margin: 8px 0 2px; }
+  input[type=range] { width: 100%; }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>AI 姿勢與專注監控 <span class="badge">Edge AI · 本地運算</span></h1>
+  <div class="sub">開啟網頁後會自動啟動鏡頭,先用 5 秒校正你的端正坐姿,接著即時監控坐姿與是否分心。使用 Google MediaPipe 在瀏覽器端運算,影像不會上傳。</div>
+
+  <div class="grid">
+    <section class="card">
+      <div class="stage">
+        <video id="video" playsinline muted></video>
+        <canvas id="canvas"></canvas>
+        <div class="banner" id="banner" hidden></div>
+        <div class="calmsg" id="calmsg" hidden></div>
+        <div class="overlay" id="overlay"><div id="overlayMsg">準備中…</div></div>
+      </div>
+      <div class="row">
+        <button id="startBtn">開啟鏡頭</button>
+        <button id="stopBtn" class="secondary" disabled>停止</button>
+        <button id="calBtn" class="secondary" disabled>重新校正</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="status" id="status" style="color:var(--muted)">尚未開始</div>
+      <div class="focus" id="focus">專注率 --% · 分心 0 次</div>
+
+      <div class="metric">
+        <div class="top"><span class="name">頸部前傾角</span><span class="val" id="neckVal">--°</span></div>
+        <div class="bar"><i id="neckBar"></i></div>
+      </div>
+      <div class="metric">
+        <div class="top"><span class="name">軀幹傾斜角</span><span class="val" id="trunkVal">--°</span></div>
+        <div class="bar"><i id="trunkBar"></i></div>
+      </div>
+      <div class="metric">
+        <div class="top"><span class="name">頭部轉向(看向別處)</span><span class="val" id="yawVal">--</span></div>
+        <div class="bar"><i id="yawBar"></i></div>
+      </div>
+      <div class="metric">
+        <div class="top"><span class="name">低頭幅度(滑手機)</span><span class="val" id="pitchVal">--</span></div>
+        <div class="bar"><i id="pitchBar"></i></div>
+      </div>
+
+      <details>
+        <summary>門檻設定</summary>
+        <label>頸部門檻 <span id="neckThLbl">30°</span></label>
+        <input type="range" id="neckTh" min="10" max="60" value="30">
+        <label>軀幹門檻 <span id="trunkThLbl">15°</span></label>
+        <input type="range" id="trunkTh" min="5" max="45" value="15">
+        <label>轉頭門檻 <span id="yawThLbl">0.30</span></label>
+        <input type="range" id="yawTh" min="10" max="80" value="30">
+        <label>低頭門檻 <span id="pitchThLbl">0.25</span></label>
+        <input type="range" id="pitchTh" min="10" max="80" value="25">
+        <label>離開畫面/分心持續多久才提醒 <span id="delayLbl">3 秒</span></label>
+        <input type="range" id="delay" min="1" max="15" value="3">
+        <label>聲音提示 <input type="checkbox" id="beep"></label>
+      </details>
+
+      <div class="note">校正時請端正坐好、看向螢幕。轉頭與低頭以你校正時的姿勢為基準;建議鏡頭放在斜前方約 45° 讓耳、肩、髖都能入鏡。分心的判定:持續轉頭、低頭,或離開畫面。</div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import { PoseLandmarker, FilesetResolver }
+  from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+const MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const CAL_MS = 5000;
+
+const $ = id => document.getElementById(id);
+const video = $("video"), canvas = $("canvas"), ctx = canvas.getContext("2d");
+const overlay = $("overlay"), overlayMsg = $("overlayMsg"), banner = $("banner"), calmsg = $("calmsg"), statusEl = $("status");
+
+let landmarker = null, stream = null, running = false, rafId = 0, lastTs = -1;
+let phase = "idle"; // idle | calibrating | monitoring
+let calStart = 0, calSamples = [];
+let baseline = { neck: 0, trunk: 0, yaw: 0, pitch: 0 };
+let smooth = null, audioCtx = null, lastBeep = 0;
+let issueSince = 0, lastTick = 0;
+let stats = { watched: 0, distracted: 0, episodes: 0, wasDistracted: false };
+
+// MediaPipe Pose 索引:鼻 0、耳 7/8、肩 11/12、髖 23/24
+const SIDES = { left: { ear: 7, sh: 11, hip: 23 }, right: { ear: 8, sh: 12, hip: 24 } };
+
+// 與垂直線(向上)的夾角(度);座標先換算成像素尺度以免長寬比失真
+function angleFromVertical(from, to, w, h) {
+  const dx = (to.x - from.x) * w, dy = (to.y - from.y) * h;
+  return Math.abs(Math.atan2(dx, -dy) * 180 / Math.PI);
+}
+
+async function ensureModel() {
+  if (landmarker) return;
+  overlayMsg.textContent = "載入 AI 模型中…";
+  const fileset = await FilesetResolver.forVisionTasks(WASM);
+  const opts = (delegate) => ({
+    baseOptions: { modelAssetPath: MODEL, delegate },
+    runningMode: "VIDEO", numPoses: 1,
+    minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
+  });
+  try { landmarker = await PoseLandmarker.createFromOptions(fileset, opts("GPU")); }
+  catch { landmarker = await PoseLandmarker.createFromOptions(fileset, opts("CPU")); }
+}
+
+async function start() {
+  $("startBtn").disabled = true;
+  overlay.hidden = false;
+  try {
+    await ensureModel();
+    overlayMsg.textContent = "請允許使用鏡頭…";
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    overlay.hidden = true;
+    running = true; lastTs = -1; smooth = null;
+    stats = { watched: 0, distracted: 0, episodes: 0, wasDistracted: false };
+    $("stopBtn").disabled = false; $("calBtn").disabled = false;
+    beginCalibration();
+    loop();
+  } catch (e) {
+    overlay.hidden = false;
+    overlayMsg.textContent = "無法啟動:" + (e.name === "NotAllowedError" ? "未允許鏡頭權限,請在網址列允許後按「開啟鏡頭」" : e.message);
+    $("startBtn").disabled = false;
+  }
+}
+
+function stop() {
+  running = false; phase = "idle"; cancelAnimationFrame(rafId);
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null; video.srcObject = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  banner.hidden = true; calmsg.hidden = true; overlay.hidden = false;
+  overlayMsg.textContent = "已停止。按「開啟鏡頭」重新開始。";
+  $("startBtn").disabled = false; $("stopBtn").disabled = true; $("calBtn").disabled = true;
+  setStatus("尚未開始", "var(--muted)");
+}
+
+function beginCalibration() {
+  phase = "calibrating"; calStart = performance.now(); calSamples = []; issueSince = 0; banner.hidden = true;
+  setStatus("校正中…", "var(--accent)");
+}
+
+function finishCalibration() {
+  if (calSamples.length < 10) { calmsg.textContent = "未偵測到完整身形,請讓耳、肩、髖入鏡…"; calStart = performance.now(); calSamples = []; return; }
+  const avg = k => calSamples.reduce((s, x) => s + x[k], 0) / calSamples.length;
+  baseline = { neck: avg("neck"), trunk: avg("trunk"), yaw: avg("yaw"), pitch: avg("pitch") };
+  calmsg.hidden = true; phase = "monitoring"; lastTick = performance.now(); issueSince = 0;
+}
+
+function setStatus(t, c) { statusEl.textContent = t; statusEl.style.color = c; }
+
+function setMetric(key, v, th, max, fmt) {
+  $(key + "Val").textContent = v == null ? "--" : fmt(v);
+  const bar = $(key + "Bar");
+  bar.style.width = v == null ? "0" : Math.min(100, v / max * 100) + "%";
+  bar.style.background = v != null && v > th ? "var(--bad)" : v != null && v > th * 0.8 ? "var(--warn)" : "var(--ok)";
+}
+const deg = v => Math.round(v) + "°", rat = v => v.toFixed(2);
+
+function beep() {
+  if (!$("beep").checked) return;
+  const now = performance.now();
+  if (now - lastBeep < 5000) return;
+  lastBeep = now;
+  try {
+    audioCtx = audioCtx || new AudioContext();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = 660; g.gain.value = 0.08;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.25);
+  } catch {}
+}
+
+function updateFocus() {
+  const pct = stats.watched > 0 ? Math.round((1 - stats.distracted / stats.watched) * 100) : null;
+  $("focus").textContent = `專注率 ${pct == null ? "--" : pct}% · 分心 ${stats.episodes} 次`;
+}
+
+function clearMetrics() {
+  setMetric("neck", null, 1, 1); setMetric("trunk", null, 1, 1); setMetric("yaw", null, 1, 1); setMetric("pitch", null, 1, 1);
+}
+
+function loop() {
+  if (!running) return;
+  rafId = requestAnimationFrame(loop);
+  if (video.readyState < 2 || video.currentTime === lastTs) return;
+  lastTs = video.currentTime;
+
+  const now = performance.now();
+  const res = landmarker.detectForVideo(video, now);
+  const w = video.videoWidth, h = video.videoHeight;
+  ctx.clearRect(0, 0, w, h);
+
+  const th = {
+    neck: +$("neckTh").value, trunk: +$("trunkTh").value,
+    yaw: +$("yawTh").value / 100, pitch: +$("pitchTh").value / 100,
+    delay: +$("delay").value * 1000,
+  };
+
+  // 監控階段累計時間(離開畫面也算已觀察時間)
+  let dt = 0;
+  if (phase === "monitoring") { dt = now - lastTick; lastTick = now; stats.watched += dt; }
+
+  const lm = res.landmarks && res.landmarks[0];
+  let m = null; // 當幀指標
+  if (lm) {
+    const vis = s => (lm[s.ear].visibility + lm[s.sh].visibility + lm[s.hip].visibility) / 3;
+    const side = vis(SIDES.left) >= vis(SIDES.right) ? SIDES.left : SIDES.right;
+    const ear = lm[side.ear], sh = lm[side.sh], hip = lm[side.hip], nose = lm[0];
+    const px = p => [p.x * w, p.y * h];
+
+    ctx.lineWidth = 4; ctx.strokeStyle = "#2f6fed"; ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.moveTo(...px(ear)); ctx.lineTo(...px(sh)); ctx.lineTo(...px(hip)); ctx.stroke();
+    for (const p of [ear, sh, hip, nose]) { ctx.beginPath(); ctx.arc(...px(p), 6, 0, 7); ctx.fill(); ctx.stroke(); }
+
+    if (vis(side) >= 0.5 && nose.visibility >= 0.5) {
+      const torso = Math.hypot((sh.x - hip.x) * w, (sh.y - hip.y) * h) || 1;
+      const raw = {
+        neck: angleFromVertical(sh, ear, w, h),
+        trunk: angleFromVertical(hip, sh, w, h),
+        yaw: (nose.x - ear.x) * w / torso,    // 鼻子相對耳朵的水平位置(以軀幹長度標準化)
+        pitch: (nose.y - ear.y) * h / torso,  // 鼻子相對耳朵的垂直位置,低頭時增加
+      };
+      smooth = smooth ? Object.fromEntries(Object.keys(raw).map(k => [k, smooth[k] * 0.7 + raw[k] * 0.3])) : raw;
+      m = smooth;
+    }
+  }
+
+  if (phase === "calibrating") {
+    calmsg.hidden = false;
+    const left = Math.max(0, CAL_MS - (now - calStart));
+    if (m) { calSamples.push({ ...m }); calmsg.textContent = `校正中:請端正坐好、看向螢幕 ${Math.ceil(left / 1000)}`; }
+    else calmsg.textContent = "請讓耳、肩、髖完整入鏡…";
+    clearMetrics();
+    if (left === 0) finishCalibration();
+    return;
+  }
+  if (phase !== "monitoring") return;
+
+  // 監控
+  let posture = [], distract = [];
+  if (!m) {
+    clearMetrics();
+    distract.push("離開畫面");
+  } else {
+    const neck = Math.max(0, m.neck - baseline.neck);
+    const trunk = Math.max(0, m.trunk - baseline.trunk);
+    const yaw = Math.abs(m.yaw - baseline.yaw);
+    const pitch = Math.max(0, m.pitch - baseline.pitch);
+    setMetric("neck", neck, th.neck, 60, deg);
+    setMetric("trunk", trunk, th.trunk, 45, deg);
+    setMetric("yaw", yaw, th.yaw, 1, rat);
+    setMetric("pitch", pitch, th.pitch, 1, rat);
+    if (neck > th.neck) posture.push("頭部前傾");
+    if (trunk > th.trunk) posture.push("駝背/軀幹傾斜");
+    if (yaw > th.yaw) distract.push("轉頭看別處");
+    if (pitch > th.pitch) distract.push("低頭");
+  }
+
+  const issues = [...distract, ...posture];
+  const isDistracted = distract.length > 0;
+  if (!issues.length) {
+    issueSince = 0; banner.hidden = true; setStatus("專注且姿勢良好 ✓", "var(--ok)");
+  } else {
+    if (!issueSince) issueSince = now;
+    if (now - issueSince >= th.delay) {
+      banner.textContent = (isDistracted ? "👀 分心:" : "⚠ 姿勢:") + issues.join("、") + (isDistracted ? ",請回到工作" : ",請調整坐姿");
+      banner.hidden = false;
+      setStatus(isDistracted ? "分心中" : "姿勢不良", "var(--bad)"); beep();
+    } else {
+      setStatus("注意:" + issues.join("、"), "var(--warn)");
+    }
+  }
+
+  // 只有持續超過延遲的分心才計入統計
+  const confirmed = isDistracted && issueSince && now - issueSince >= th.delay;
+  if (confirmed) {
+    stats.distracted += dt;
+    if (!stats.wasDistracted) stats.episodes++;
+  }
+  stats.wasDistracted = confirmed;
+  updateFocus();
+}
+
+$("startBtn").onclick = start;
+$("stopBtn").onclick = stop;
+$("calBtn").onclick = () => { if (running) beginCalibration(); };
+for (const [id, lbl, fmt] of [
+  ["neckTh", "neckThLbl", v => v + "°"], ["trunkTh", "trunkThLbl", v => v + "°"],
+  ["yawTh", "yawThLbl", v => (v / 100).toFixed(2)], ["pitchTh", "pitchThLbl", v => (v / 100).toFixed(2)],
+  ["delay", "delayLbl", v => v + " 秒"]]) {
+  $(id).oninput = () => { $(lbl).textContent = fmt($(id).value); };
+}
+
+// 開啟網頁即自動啟動(瀏覽器會先跳出鏡頭權限詢問)
+start();
+</script>
+</body>
+</html>
