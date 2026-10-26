@@ -22,6 +22,7 @@
     :record="s.lastRecord"
     :history="s.history"
     :dps-series="s.battle?.dpsSeries ?? []"
+    :events="s.eventLog"
     :storage-error="s.storageError"
     :history-error="s.historyError"
     @again="onAgain"

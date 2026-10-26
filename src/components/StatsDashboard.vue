@@ -23,6 +23,16 @@
       <p v-if="historyError" class="hint warn">讀不到以前的紀錄</p>
     </header>
 
+    <section v-if="events.length" class="event-photos">
+      <h3>這次發生的事</h3>
+      <ul>
+        <li v-for="(e, i) in events" :key="i">
+          <img v-if="e.photo" :src="e.photo" alt="">
+          <span>{{ e.at }} {{ EVENT_REASON_LABEL[e.reason] ?? e.reason }}</span>
+        </li>
+      </ul>
+    </section>
+
     <section class="charts">
       <figure><figcaption>時間都花在哪</figcaption><canvas ref="pieEl" /></figure>
       <figure><figcaption>每 5 秒打出的傷害</figcaption><canvas ref="lineEl" /></figure>
@@ -63,6 +73,7 @@ import {
   RadarController, RadialLinearScale, LinearScale, CategoryScale, Tooltip,
 } from 'chart.js'
 import { radarAxes } from '../core/radar.js'
+import { EVENT_REASON_LABEL } from '../core/eventLog.js'
 import { buildSummary } from '../core/summary.js'
 import { needsBreakAfter } from '../core/battleConfig.js'
 
@@ -70,6 +81,7 @@ Chart.register(PieController, ArcElement, LineController, LineElement, PointElem
                RadarController, RadialLinearScale, LinearScale, CategoryScale, Tooltip)
 
 const props = defineProps({
+  events: { type: Array, default: () => [] },
   record: { type: Object, default: null },
   history: { type: Array, default: () => [] },
   dpsSeries: { type: Array, default: () => [] },
@@ -169,6 +181,10 @@ onBeforeUnmount(() => { for (const c of charts) c.destroy() })
 </script>
 
 <style scoped>
+.event-photos ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.event-photos li { width: 150px; font-size: 13px; }
+.event-photos img { display: block; width: 100%; border-radius: 8px; }
+
 .stats {
   min-height: 100dvh;
   /* 複審第 1 輪 F4：四邊都跟 .stack（layout.css）同一個慣例——

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createEventLog, EVENT_LOG_MAX } from './eventLog.js'
+import { createEventLog, EVENT_LOG_MAX, EVENT_PHOTO_MAX } from './eventLog.js'
 
 const W = Date.UTC(2026, 0, 1, 12, 0, 0)
 
@@ -33,5 +33,17 @@ describe('eventLog', () => {
     expect(EVENT_LOG_MAX).toBe(200)
     log.reset()
     expect(log.entries()).toEqual([])
+  })
+  it('attaches photos to the newest entries and caps how many are kept', () => {
+    const log = createEventLog()
+    for (let i = 0; i < 40; i++) {
+      log.observe({ posture: 'slouch' }, i, W)
+      log.attachPhoto(1, `data:p${i}`)
+      log.observe({ posture: 'upright' }, i, W)
+    }
+    const e = log.entries()
+    expect(e.filter((x) => x.photo).length).toBe(EVENT_PHOTO_MAX)
+    expect(e[e.length - 1].photo).toBe('data:p39')
+    expect(e[0].photo).toBeUndefined()
   })
 })

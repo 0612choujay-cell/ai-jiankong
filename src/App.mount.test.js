@@ -34,6 +34,7 @@ const fakeState = reactive({
   // 的任務類型然後靜默退回 custom，而這個 fixture 就跟真實 state 脫節了
   // （這個檔案第 4 輪吃過的正是這個虧：cameraHealthy 沒宣告）。
   taskType: 'homework',
+  eventLog: [],
   // 複審 B-1：植進哨兵值的兩個「絕對不准進 DOM」的欄位。profile 是校準基準
   // （身體量測值），battle 是整場的原始統計——兩者都是複審實際攻擊過的通道
   // （`:data-profile="JSON.stringify(s.profile)"` 等等）。

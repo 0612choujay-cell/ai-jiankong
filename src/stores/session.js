@@ -168,6 +168,7 @@ const state = reactive({
 })
 
 let camera = null
+let bootVideoEl = null
 let inference = null
 let analyzer = null
 let fsm = null
@@ -690,7 +691,9 @@ async function frame(gen) {
         if (autoBaseline) e.posture = 'upright'
         state.posture = e.posture
         state.drowsy = e.drowsy
-        if (eventLog.observe({ posture: e.posture, drowsy: e.drowsy, phoneVisible: state.phoneVisible }, sessionT(now))) {
+        const added = eventLog.observe({ posture: e.posture, drowsy: e.drowsy, phoneVisible: state.phoneVisible }, sessionT(now))
+        if (added) {
+          eventLog.attachPhoto(added, snapshotPhoto())
           state.eventLog = eventLog.entries()
         }
         const events = fsm.tick({
@@ -864,7 +867,26 @@ let skipHistoryOnce = false
 // 見 api.boot() 上方的說明。
 let bootInFlight = null
 
+/**
+ * 事件照片：從鏡頭 video 縮成 320px 寬的 JPEG data URL，只放在記憶體、
+ * 結算頁看完就丟——不寫入儲存層、不上傳（使用者明示要求拍照留證）。
+ */
+function snapshotPhoto() {
+  try {
+    const v = bootVideoEl
+    if (!v || !v.videoWidth || !v.videoHeight) return null
+    const c = document.createElement('canvas')
+    c.width = 320
+    c.height = Math.round(320 * v.videoHeight / v.videoWidth)
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height)
+    return c.toDataURL('image/jpeg', 0.6)
+  } catch {
+    return null
+  }
+}
+
 async function bootOnce(videoEl) {
+  bootVideoEl = videoEl
   // 這三個 await（reconcile() 的 IndexedDB 補寫、getUserMedia 的權限對話框、
   // MediaPipe 模型下載）加起來是整個 App 最長的一段空窗，好幾秒。這段期間
   // 唯一可能發生的世界變化是 App 被卸載（開始畫面上沒有別的按鈕；
