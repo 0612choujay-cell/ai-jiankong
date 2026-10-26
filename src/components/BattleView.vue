@@ -220,7 +220,7 @@ import { createMessageQueue, PRIORITY } from '../core/messageQueue.js'
 import { createPostureCoach } from '../core/postureCoach.js'
 import { copyKeyForEvent } from '../core/bossDialogue.js'
 import { BATTLE } from '../core/battleConfig.js'
-import { playGong, shouldAlert, PHONE_ALERT_TEXT } from '../core/phoneAlert.js'
+import { playGong, PHONE_ALERT_TEXT, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
 
 const props = defineProps({
   // App.vue 唯一那顆真正接了 getUserMedia 的 <video>（跟 CalibrationWizard
@@ -661,21 +661,28 @@ function onEvents(events) {
   refreshCoachMessage(now)
 }
 
-// 拿出手機：敲鑼＋念一句。邊緣觸發＋冷卻在 phoneAlert.js；遵守 🔊／🔇 開關。
-// 鑼聲用自己的 AudioContext（開戰是使用者手勢之後，瀏覽器允許出聲）。
+// 拿出手機：敲鑼＋念一句，手機還在畫面上就每 PHONE_ALERT_REPEAT_MS 重複，收起來才停。
+// 遵守 🔊／🔇 開關。鑼聲用自己的 AudioContext（開戰是使用者手勢之後，瀏覽器允許出聲）。
 let gongCtx = null
-let phoneAlertAt = null
-watch(() => s.phoneVisible, (isVisible, wasVisible) => {
-  const now = performance.now()
-  if (!shouldAlert({ wasVisible, isVisible, lastAt: phoneAlertAt, now })) return
-  if (!s.voiceEnabled) return
-  phoneAlertAt = now
+let phoneAlertTimer = 0
+function phoneAlertOnce() {
+  if (!s.phoneVisible || !s.voiceEnabled) return
   try {
     gongCtx = gongCtx || new (window.AudioContext || window.webkitAudioContext)()
   } catch { gongCtx = null }
   playGong(gongCtx)
   // 比戰鬥旁白高一級，才能搶佔正在念的句子。
   session.voice().speak(PHONE_ALERT_TEXT, PRIORITY.trap)
+}
+function stopPhoneAlert() {
+  clearInterval(phoneAlertTimer)
+  phoneAlertTimer = 0
+}
+watch(() => s.phoneVisible, (isVisible) => {
+  stopPhoneAlert()
+  if (!isVisible) return
+  phoneAlertOnce()
+  phoneAlertTimer = setInterval(phoneAlertOnce, PHONE_ALERT_REPEAT_MS)
 })
 
 function onUndo(trapId) {
@@ -758,6 +765,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  stopPhoneAlert()
   gongCtx?.close?.()
   gongCtx = null
   offEvents?.()

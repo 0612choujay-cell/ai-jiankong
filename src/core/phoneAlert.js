@@ -4,11 +4,12 @@
  * 這是使用者明確要求的行為，刻意推翻原本「手機／離開類提示一律不朗讀」的
  * 保護（data/copy/posture.js 的 NO_VOICE_POSTURE_KEYS 是為了不把被抓包的事
  * 廣播給旁人）。所以它不走 messageQueue 的 voice 仲裁，而是這個獨立模組：
- * 邊緣觸發（手機從沒有變成有才響）＋冷卻，同一次拿著手機不會一直敲。
+ * 手機一出現就響，之後每 PHONE_ALERT_REPEAT_MS 重複，直到手機離開畫面。
  * 仍然遵守角落的 🔊／🔇 開關（由呼叫端判斷）。
  */
 export const PHONE_ALERT_TEXT = '分心了，手機收起來'
-export const PHONE_ALERT_COOLDOWN_MS = 20_000
+// 手機在畫面上就每隔這麼久再敲一次、再念一次，直到收起來為止。
+export const PHONE_ALERT_REPEAT_MS = 6000
 
 // 銅鑼的音色：一組不成整數倍的泛音，各自指數衰減，基音衰減最慢。
 const PARTIALS = [
@@ -46,13 +47,4 @@ export function playGong(ctx) {
   } catch {
     return false
   }
-}
-
-/**
- * 邊緣觸發＋冷卻的判斷，純函式好測。
- * @returns {boolean} 這一次是否該提醒。
- */
-export function shouldAlert({ wasVisible, isVisible, lastAt, now }) {
-  if (!isVisible || wasVisible) return false
-  return lastAt == null || now - lastAt >= PHONE_ALERT_COOLDOWN_MS
 }

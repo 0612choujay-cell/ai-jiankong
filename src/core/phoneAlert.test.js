@@ -1,16 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
-import { shouldAlert, playGong, PHONE_ALERT_COOLDOWN_MS, PHONE_ALERT_TEXT } from './phoneAlert.js'
+import { playGong, PHONE_ALERT_REPEAT_MS, PHONE_ALERT_TEXT } from './phoneAlert.js'
 import { firstBannedWord } from './copyGuardrail.js'
 
 describe('phoneAlert', () => {
-  it('手機從沒有變成有才提醒；一直拿著不重複', () => {
-    expect(shouldAlert({ wasVisible: false, isVisible: true, lastAt: null, now: 0 })).toBe(true)
-    expect(shouldAlert({ wasVisible: true, isVisible: true, lastAt: null, now: 0 })).toBe(false)
-    expect(shouldAlert({ wasVisible: true, isVisible: false, lastAt: null, now: 0 })).toBe(false)
-  })
-  it('冷卻內不再提醒，過了才可以', () => {
-    expect(shouldAlert({ wasVisible: false, isVisible: true, lastAt: 1000, now: 1000 + PHONE_ALERT_COOLDOWN_MS - 1 })).toBe(false)
-    expect(shouldAlert({ wasVisible: false, isVisible: true, lastAt: 1000, now: 1000 + PHONE_ALERT_COOLDOWN_MS })).toBe(true)
+  it('重複間隔要比一次鑼聲加語音（約 3 秒）長，才不會疊在一起', () => {
+    expect(PHONE_ALERT_REPEAT_MS).toBeGreaterThanOrEqual(5000)
   })
   it('playGong 對 null 安全，有 AudioContext 時建立泛音振盪器', () => {
     expect(playGong(null)).toBe(false)
