@@ -52,28 +52,6 @@ const SPECS = [{ key: 'pose', fps: 2 }, { key: 'face', fps: 3 }, { key: 'object'
  * 並且反向鎖住學習用品與上面兩個被裁掉的標籤不得再被加回來。
  * （那條護欄在複審時被指出「宣稱存在但根本不存在」——現在它真的在了。）
  */
-/**
- * MPMask（人=高信心）→ 縮小的「背景透明度」：人 0、背景 255，中間做柔化邊緣。
- * 縮到最長邊 160 以內，轉成 PNG 才不會太大。
- */
-export function maskToBackgroundAlpha(mask, maxSide = 160) {
-  const w = mask.width
-  const h = mask.height
-  const conf = mask.getAsFloat32Array()
-  const step = Math.max(1, Math.ceil(Math.max(w, h) / maxSide))
-  const ow = Math.floor(w / step)
-  const oh = Math.floor(h / step)
-  const data = new Uint8ClampedArray(ow * oh)
-  for (let y = 0; y < oh; y++) {
-    for (let x = 0; x < ow; x++) {
-      const c = conf[y * step * w + x * step]
-      // ≥0.75 視為人（清楚），≤0.35 視為背景（模糊），中間線性過渡
-      data[y * ow + x] = Math.round(255 * Math.min(1, Math.max(0, (0.75 - c) / 0.4)))
-    }
-  }
-  return { w: ow, h: oh, data }
-}
-
 const DISTRACTING_LABELS = Object.freeze([
   'cell phone',
   'remote',
@@ -341,10 +319,6 @@ export function createInferenceService({ videoEl }) {
   // 活在訂閱者那一次呼叫裡，不得存起來），見 notifyPoseFrame 與 onPoseFrame。
   const faceObservers = []
   const handObservers = []
-  // 人像遮罩（背景模糊用）：只在有人訂閱時才向 PoseLandmarker 要 segmentation mask，
-  // 沒人訂閱時不付這筆成本。遮罩轉成背景透明度後就送給訂閱者，不保存。
-  const maskObservers = []
-  let maskOn = false
 
   function notifyAll(list, landmarks) {
     for (let i = 0; i < list.length; i += 1) {
@@ -576,20 +550,7 @@ export function createInferenceService({ videoEl }) {
         let poseLandmarks = null
         let faceLandmarks = null
         if (key === 'pose') {
-          const wantMask = maskObservers.length > 0
-          if (wantMask !== maskOn) {
-            try { tasks.pose.setOptions?.({ outputSegmentationMasks: wantMask }); maskOn = wantMask } catch { /* 要不到遮罩就維持不模糊 */ }
-          }
-          const poseResult = tasks.pose.detectForVideo(videoEl, now)
-          poseLandmarks = largestPose(poseResult)
-          const masks = poseResult?.segmentationMasks ?? null
-          if (masks?.length) {
-            try {
-              if (maskObservers.length > 0) notifyAll(maskObservers, maskToBackgroundAlpha(masks[0]))
-            } finally {
-              for (const m of masks) m?.close?.()
-            }
-          }
+          poseLandmarks = largestPose(tasks.pose.detectForVideo(videoEl, now))
           updatePersonBox(poseLandmarks, now)
           metrics = poseMetrics(poseLandmarks)
         } else if (key === 'face') {
@@ -730,8 +691,6 @@ export function createInferenceService({ videoEl }) {
     // 呼叫回來就要用完、不得保存；沒偵測到時收到 null；回傳冪等的解除訂閱函式。
     onFaceFrame: (observer) => subscribe(faceObservers, observer),
     onHandFrame: (observer) => subscribe(handObservers, observer),
-    // 人像遮罩的背景透明度（{ w, h, data: Uint8ClampedArray }）；契約同上，用完即丟。
-    onMaskFrame: (observer) => subscribe(maskObservers, observer),
     actualFps: (key, now) => scheduler.actualFps(key, now),
     isReady: () => ready,
     // 白名單，不是 spread。spread 是「裡面有什麼就吐什麼」——哪天有人為了除錯
@@ -756,8 +715,6 @@ export function createInferenceService({ videoEl }) {
       poseObservers.length = 0
       faceObservers.length = 0
       handObservers.length = 0
-      maskObservers.length = 0
-      maskOn = false
       personBox = null
     },
   }
