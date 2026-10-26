@@ -47,3 +47,12 @@ describe('eventLog', () => {
     expect(e[0].photo).toBeUndefined()
   })
 })
+
+describe('event descriptions', () => {
+  it('has a detail line for every reason and formats elapsed time', async () => {
+    const m = await import('./eventLog.js')
+    for (const k of Object.keys(m.EVENT_REASON_LABEL)) expect(m.EVENT_REASON_DETAIL[k]).toBeTruthy()
+    expect(m.formatElapsed(83000)).toBe('1:23')
+    expect(m.formatElapsed(null)).toBe('0:00')
+  })
+})

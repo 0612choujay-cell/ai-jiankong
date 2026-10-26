@@ -27,11 +27,19 @@
       <h3>這次發生的事</h3>
       <ul>
         <li v-for="(e, i) in events" :key="i">
-          <img v-if="e.photo" :src="e.photo" alt="">
-          <span>{{ e.at }} {{ EVENT_REASON_LABEL[e.reason] ?? e.reason }}</span>
+          <button v-if="e.photo" type="button" class="photo-btn" @click="openEvent = e">
+            <img :src="e.photo" :alt="describe(e)">
+          </button>
+          <span>{{ describe(e) }}</span>
         </li>
       </ul>
     </section>
+
+    <div v-if="openEvent" class="lightbox" role="dialog" aria-modal="true" @click="openEvent = null">
+      <img :src="openEvent.photo" :alt="describe(openEvent)">
+      <p>{{ describe(openEvent) }}</p>
+      <button type="button" class="primary" @click.stop="openEvent = null">關閉</button>
+    </div>
 
     <section class="charts">
       <figure><figcaption>時間都花在哪</figcaption><canvas ref="pieEl" /></figure>
@@ -73,12 +81,17 @@ import {
   RadarController, RadialLinearScale, LinearScale, CategoryScale, Tooltip,
 } from 'chart.js'
 import { radarAxes } from '../core/radar.js'
-import { EVENT_REASON_LABEL } from '../core/eventLog.js'
+import { EVENT_REASON_DETAIL, formatElapsed } from '../core/eventLog.js'
 import { buildSummary } from '../core/summary.js'
 import { needsBreakAfter } from '../core/battleConfig.js'
 
 Chart.register(PieController, ArcElement, LineController, LineElement, PointElement,
                RadarController, RadialLinearScale, LinearScale, CategoryScale, Tooltip)
+
+const openEvent = ref(null)
+function describe(e) {
+  return `${e.at}（開始後 ${formatElapsed(e.tMs)}）${EVENT_REASON_DETAIL[e.reason] ?? e.reason}`
+}
 
 const props = defineProps({
   events: { type: Array, default: () => [] },
@@ -183,6 +196,10 @@ onBeforeUnmount(() => { for (const c of charts) c.destroy() })
 <style scoped>
 .event-photos ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .event-photos li { width: 150px; font-size: 13px; }
+.photo-btn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.lightbox { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px; padding: 16px; background: rgba(0, 0, 0, .85); color: #fff; }
+.lightbox img { max-width: 100%; max-height: 70vh; border-radius: 8px; }
 .event-photos img { display: block; width: 100%; border-radius: 8px; }
 
 .stats {

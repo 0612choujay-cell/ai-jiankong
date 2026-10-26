@@ -20,6 +20,23 @@ export const EVENT_REASON_LABEL = {
   phone: '看到手機',
 }
 
+/** 結算頁照片下方的說明：這張照片拍到了什麼 */
+export const EVENT_REASON_DETAIL = {
+  slouch: '駝背：上半身彎下去了',
+  forwardHead: '低頭：頭往前低下去了',
+  handProp: '撐頭：用手撐著頭',
+  headTilt: '歪頭：頭歪向一邊',
+  gazeAway: '視線離開：眼睛沒有看前方',
+  drowsy: '疑似睡著或躺下',
+  phone: '看到手機',
+}
+
+/** 場次內毫秒 → m:ss */
+export function formatElapsed(tMs) {
+  const sec = Math.max(0, Math.floor((tMs ?? 0) / 1000))
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+}
+
 function clock(d) {
   const p = (n) => String(n).padStart(2, '0')
   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
