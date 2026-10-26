@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { personEllipse, smoothEllipse } from './blurRegion.js'
+import { personEllipse, smoothEllipse, growClearRegion } from './blurRegion.js'
 
 const lm = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 1 }))
 lm[0] = { x: 0.5, y: 0.3, visibility: 1 }
@@ -29,5 +29,18 @@ describe('blurRegion', () => {
     expect(smoothEllipse(a, b).cx).toBe(50)
     expect(smoothEllipse(null, b)).toBe(b)
     expect(smoothEllipse(a, null)).toBeNull()
+  })
+})
+
+describe('growClearRegion', () => {
+  it('extends the clear (0) area outward by px / pxPerCell cells', () => {
+    const data = new Uint8ClampedArray(9 * 1).fill(255)
+    data[4] = 0
+    const out = growClearRegion({ w: 9, h: 1, data }, 20, 10) // 2 格
+    expect([...out.data]).toEqual([255, 255, 0, 0, 0, 0, 0, 255, 255])
+  })
+  it('is a no-op for 0 radius', () => {
+    const m = { w: 2, h: 1, data: new Uint8ClampedArray([0, 255]) }
+    expect(growClearRegion(m, 0, 10)).toBe(m)
   })
 })
