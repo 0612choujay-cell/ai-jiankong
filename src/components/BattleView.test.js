@@ -1782,9 +1782,9 @@ describe('BattleView：骨架線疊加層的接線與隱私', () => {
     const { el, app } = mount({ videoEl: null })
     await nextTick()
 
-    // PoseSkeletonOverlay＋OpenPoseOverlay＋ChestZoomLayer 各訂閱一次。
-    expect(onPoseFrameSpy).toHaveBeenCalledTimes(3)
-    expect(poseObservers.length).toBe(3)
+    // PoseSkeletonOverlay＋OpenPoseOverlay＋ChestZoomLayer＋BackgroundBlur 各訂閱一次。
+    expect(onPoseFrameSpy).toHaveBeenCalledTimes(4)
+    expect(poseObservers.length).toBe(4)
 
     app.unmount()
     // 卸載後還留著訂閱＝推論每一幀都在呼叫一個已經不存在的畫面。
@@ -1797,7 +1797,7 @@ describe('BattleView：骨架線疊加層的接線與隱私', () => {
     const { el, app } = mount({ videoEl: null })
     await nextTick()
 
-    poseObservers[1](landmarksWithCanary()) // [0] 是 ChestZoomLayer，[1] 才是 PoseSkeletonOverlay
+    poseObservers[2](landmarksWithCanary()) // [0] ChestZoomLayer、[1] BackgroundBlur、[2] 才是 PoseSkeletonOverlay
     await nextTick()
 
     expect(drawn.strokes, '這一幀應該真的畫了線（否則這條測試綠得沒有理由）').toBe(1)
@@ -1864,13 +1864,13 @@ describe('BattleView：骨架線疊加層的接線與隱私', () => {
     fakeState.posture = 'slouch'
     const { el, app } = mount({ videoEl: null })
     await nextTick()
-    poseObservers[1](landmarksWithCanary()) // [0] 是 ChestZoomLayer，[1] 才是 PoseSkeletonOverlay
+    poseObservers[2](landmarksWithCanary()) // [0] ChestZoomLayer、[1] BackgroundBlur、[2] 才是 PoseSkeletonOverlay
     await nextTick()
     expect(seenStroke, `posture=slouch 應該畫成 --c-danger（${danger}）`).toBe(danger)
 
     fakeState.posture = 'upright'
     await nextTick()
-    poseObservers[1](landmarksWithCanary()) // [0] 是 ChestZoomLayer，[1] 才是 PoseSkeletonOverlay
+    poseObservers[2](landmarksWithCanary()) // [0] ChestZoomLayer、[1] BackgroundBlur、[2] 才是 PoseSkeletonOverlay
     await nextTick()
     expect(seenStroke, `posture=upright 應該畫成 --c-warn（${warn}）`).toBe(warn)
 
