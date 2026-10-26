@@ -54,9 +54,9 @@ const SPECS = [{ key: 'pose', fps: 2 }, { key: 'face', fps: 3 }, { key: 'object'
  */
 /**
  * MPMask（人=高信心）→ 縮小的「背景透明度」：人 0、背景 255，中間做柔化邊緣。
- * 縮到最長邊 320 以內，轉成 PNG 才不會太大。
+ * 縮到最長邊 160 以內，轉成 PNG 才不會太大。
  */
-export function maskToBackgroundAlpha(mask, maxSide = 320) {
+export function maskToBackgroundAlpha(mask, maxSide = 160) {
   const w = mask.width
   const h = mask.height
   const conf = mask.getAsFloat32Array()
@@ -67,8 +67,8 @@ export function maskToBackgroundAlpha(mask, maxSide = 320) {
   for (let y = 0; y < oh; y++) {
     for (let x = 0; x < ow; x++) {
       const c = conf[y * step * w + x * step]
-      // ≥0.65 視為人（清楚），≤0.45 視為背景（模糊），中間線性過渡（窄，邊緣俐落）
-      data[y * ow + x] = Math.round(255 * Math.min(1, Math.max(0, (0.65 - c) / 0.2)))
+      // ≥0.75 視為人（清楚），≤0.35 視為背景（模糊），中間線性過渡
+      data[y * ow + x] = Math.round(255 * Math.min(1, Math.max(0, (0.75 - c) / 0.4)))
     }
   }
   return { w: ow, h: oh, data }

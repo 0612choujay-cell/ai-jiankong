@@ -42,38 +42,3 @@ export function smoothEllipse(prev, next, k = 0.5) {
   const mix = (a, b) => a + (b - a) * k
   return { cx: mix(prev.cx, next.cx), cy: mix(prev.cy, next.cy), rx: mix(prev.rx, next.rx), ry: mix(prev.ry, next.ry) }
 }
-
-/**
- * 把「人」的清楚範圍往外擴 px 個螢幕像素：對背景透明度做最小值濾波（可分離）。
- * @param {{w:number,h:number,data:Uint8ClampedArray}} m 背景透明度遮罩
- * @param {number} px 要擴張的螢幕像素
- * @param {number} pxPerCell 遮罩一格對應幾個螢幕像素
- */
-export function growClearRegion(m, px, pxPerCell) {
-  const r = Math.max(0, Math.round(px / (pxPerCell || 1)))
-  if (!r || !m?.w || !m?.h) return m
-  const { w, h, data } = m
-  const tmp = new Uint8ClampedArray(data.length)
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      let v = 255
-      for (let k = -r; k <= r; k++) {
-        const xx = x + k
-        if (xx >= 0 && xx < w) v = Math.min(v, data[y * w + xx])
-      }
-      tmp[y * w + x] = v
-    }
-  }
-  const out = new Uint8ClampedArray(data.length)
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      let v = 255
-      for (let k = -r; k <= r; k++) {
-        const yy = y + k
-        if (yy >= 0 && yy < h) v = Math.min(v, tmp[yy * w + x])
-      }
-      out[y * w + x] = v
-    }
-  }
-  return { w, h, data: out }
-}

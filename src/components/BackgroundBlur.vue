@@ -4,7 +4,7 @@
 
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import { personEllipse, smoothEllipse, growClearRegion } from '../core/blurRegion.js'
+import { personEllipse, smoothEllipse } from '../core/blurRegion.js'
 
 // 背景模糊：在鏡頭畫面上蓋一層 backdrop-filter，用人像分割遮罩把「人」留清楚；
 // 拿不到遮罩時退回用姿勢外框算的橢圓。
@@ -24,16 +24,9 @@ let maskCanvas = null
 
 // 人像遮罩（{ w, h, data }：背景透明度）→ PNG data URL，當 CSS mask-image 用。
 // 遮罩只活在這次呼叫裡，轉成圖之後不保留原始陣列。
-const GROW_PX = 10 // 使用者要求：清楚範圍再往外擴 10px
-function onMask(raw) {
-  if (!raw?.w || !raw?.h) return
+function onMask(m) {
+  if (!m?.w || !m?.h) return
   try {
-    const box = el.value?.parentElement
-    const vw = props.video?.videoWidth
-    const vh = props.video?.videoHeight
-    const cover = box && vw && vh ? Math.max(box.clientWidth / vw, box.clientHeight / vh) : 1
-    // 遮罩一格 ≈ 影片 vw/raw.w 個影片像素 × cover 個螢幕像素
-    const m = growClearRegion(raw, GROW_PX, ((vw || raw.w) / raw.w) * cover)
     maskCanvas ??= document.createElement('canvas')
     maskCanvas.width = m.w
     maskCanvas.height = m.h
