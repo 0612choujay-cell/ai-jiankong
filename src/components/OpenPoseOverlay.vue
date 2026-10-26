@@ -18,7 +18,7 @@
  * 同一套：畫的是未鏡像的影像座標，靠 CSS transform 對齊鏡像預覽。
  */
 import { ref, watch, onBeforeUnmount } from 'vue'
-import { FaceLandmarker, HandLandmarker } from '@mediapipe/tasks-vision'
+import { HandLandmarker } from '@mediapipe/tasks-vision'
 
 const props = defineProps({
   inference: { type: Object, default: null },
@@ -29,7 +29,6 @@ const props = defineProps({
 const MIN_VISIBILITY = 0.5
 
 // 官方連線表（MediaPipe 內建常數），不自己手抄索引。
-const FACE_LINES = FaceLandmarker.FACE_LANDMARKS_CONTOURS
 const HAND_LINES = HandLandmarker.HAND_CONNECTIONS
 // 身體只畫手臂與手指（躯幹與頸線由 PoseSkeletonOverlay 負責，會隨姿勢變色）。
 // 索引：肩 11/12、肘 13/14、腕 15/16、小指 17/18、食指 19/20、拇指 21/22。
@@ -127,32 +126,6 @@ function drawBody(lm) {
   }
 }
 
-function drawFace(lm) {
-  const layer = layers[1]
-  if (!prepare(layer)) return
-  if (!Array.isArray(lm) || lm.length < 468) return
-  const { width: W, height: H } = layer.el.value
-  const [ox, oy, sx, sy] = mapping(W, H)
-  const ctx = layer.ctx
-  ctx.lineWidth = Math.max(1.5, W * 0.003)
-  ctx.lineCap = 'round'
-  ctx.strokeStyle = 'rgba(255,255,255,.85)'
-  ctx.beginPath()
-  for (let i = 0; i < FACE_LINES.length; i += 1) {
-    const a = lm[FACE_LINES[i].start]
-    const b = lm[FACE_LINES[i].end]
-    if (!a || !b) continue
-    ctx.moveTo(ox + a.x * sx, oy + a.y * sy)
-    ctx.lineTo(ox + b.x * sx, oy + b.y * sy)
-  }
-  ctx.stroke()
-  // 瞳孔（虹膜中心）：468／473。
-  ctx.fillStyle = '#5ad1ff'
-  const r = Math.max(2, W * 0.004)
-  if (lm[468]) dot(ctx, lm[468], r, ox, oy, sx, sy)
-  if (lm[473]) dot(ctx, lm[473], r, ox, oy, sx, sy)
-}
-
 function drawHands(hands) {
   const layer = layers[2]
   if (!prepare(layer)) return
@@ -190,7 +163,7 @@ watch(() => props.inference, (inf) => {
   if (!inf) return
   unsubs = [
     typeof inf.onPoseFrame === 'function' ? inf.onPoseFrame(drawBody) : null,
-    typeof inf.onFaceFrame === 'function' ? inf.onFaceFrame(drawFace) : null,
+    // 臉部網格線（使用者要求拿掉）：不再訂閱 onFaceFrame，也不畫臉。
     typeof inf.onHandFrame === 'function' ? inf.onHandFrame(drawHands) : null,
   ]
 }, { immediate: true })
