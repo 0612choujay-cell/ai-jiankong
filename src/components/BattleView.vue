@@ -188,6 +188,16 @@
       </button>
     </div>
 
+    <div class="event-log" @click.stop>
+      <button class="mute" :aria-expanded="logOpen" @click="logOpen = !logOpen">
+        📋 紀錄 {{ eventCount }}
+      </button>
+      <ul v-if="logOpen" class="event-log-list">
+        <li v-for="(e, i) in recentEvents" :key="i">{{ e.at }} {{ EVENT_REASON_LABEL[e.reason] ?? e.reason }}</li>
+        <li v-if="!recentEvents.length">還沒有紀錄</li>
+      </ul>
+    </div>
+
     <div class="corner-tr">
       <StatusIndicator :items="statusItems" />
     </div>
@@ -218,6 +228,7 @@ import OpenPoseOverlay from './OpenPoseOverlay.vue'
 import { useSession } from '../stores/session.js'
 import { createMessageQueue, PRIORITY } from '../core/messageQueue.js'
 import { createPostureCoach } from '../core/postureCoach.js'
+import { EVENT_REASON_LABEL } from '../core/eventLog.js'
 import { copyKeyForEvent } from '../core/bossDialogue.js'
 import { BATTLE } from '../core/battleConfig.js'
 import { playGong, PHONE_ALERT_TEXT, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
@@ -232,6 +243,9 @@ defineEmits(['finish'])
 
 const session = useSession()
 const s = session.state
+const logOpen = ref(false)
+const eventCount = computed(() => (s.eventLog ?? []).length)
+const recentEvents = computed(() => (s.eventLog ?? []).slice(-8).reverse())
 const battle = computed(() => s.battle)
 const paused = computed(() => s.paused)
 
@@ -1103,6 +1117,9 @@ onBeforeUnmount(() => {
 .status { display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
 .clock { font-size: var(--fs-title); font-weight: 700; }
 .score { font-size: var(--fs-body); color: var(--c-text-dim); }
+.event-log { position: absolute; left: var(--gap); top: 30%; z-index: 4; }
+.event-log-list { margin: 4px 0 0; padding: 6px 10px; list-style: none; font-size: 14px;
+  background: rgba(0, 0, 0, .6); color: #fff; border-radius: 8px; max-width: 70vw; }
 .mute { min-height: var(--tap-min); padding: 0 12px; font-size: var(--fs-body); }
 .pause, .stop {
   min-width: var(--tap-primary); min-height: var(--tap-primary); padding: 0 20px;

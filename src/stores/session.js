@@ -12,6 +12,7 @@ import { saveSession, listSessions, writeCrumb, clearCrumb, reconcile, clearAll 
 import { profileFor } from '../core/postureProfiles.js'
 import { DEFAULT_DURATION_MIN, DEMO } from '../core/battleConfig.js'
 import { POSTURE_COPY } from '../data/copy/posture.js'
+import { createEventLog } from '../core/eventLog.js'
 import { BOSS_COPY } from '../data/copy/boss.js'
 import { SUMMARY_COPY } from '../data/copy/summary.js'
 
@@ -104,6 +105,8 @@ const state = reactive({
   posture: 'upright',
   drowsy: false,
   phoneVisible: false,
+  // 事件紀錄（時間＋原因，純文字標籤；見 core/eventLog.js）。
+  eventLog: [],
   // 單向緊急降檔（perfMonitor.js）的觀測面：latencyEma 是純數字（推論延遲的
   // 指數移動平均），perfMode 一旦變 true 就不會變回 false（見 perf 變數上方
   // 說明），只能透過整個 App 重啟或未來的手動重啟偵測入口清除。
@@ -206,6 +209,7 @@ const voice = createVoiceFeedback()
 // 之所以由 store 持有而不是留給未來畫面自己 new 一個，是因為 resetSession() 一定要
 // 打在「將要被實際拿去 take() 的那個實例」上——如果 BattleView 之後自己另外
 // createCopyEngine()，store 這裡呼叫 resetSession() 就等於對空氣開槍。
+const eventLog = createEventLog()
 const copy = createCopyEngine({ pools: { posture: POSTURE_COPY, boss: BOSS_COPY, summary: SUMMARY_COPY } })
 
 let rafId = 0
@@ -686,6 +690,9 @@ async function frame(gen) {
         if (autoBaseline) e.posture = 'upright'
         state.posture = e.posture
         state.drowsy = e.drowsy
+        if (eventLog.observe({ posture: e.posture, drowsy: e.drowsy, phoneVisible: state.phoneVisible }, sessionT(now))) {
+          state.eventLog = eventLog.entries()
+        }
         const events = fsm.tick({
           t: sessionT(now), posture: e.posture, drowsy: e.drowsy, phoneVisible: state.phoneVisible,
         })
@@ -1388,6 +1395,8 @@ const api = {
     // 不重置的話會跨場次延續，第二輪一開始（repeat 早就超過 CAUSE_FORMAT_LIMIT）就會
     // 跳過因果說明，直接講簡化版指令——小孩不會知道自己這次為什麼被打。
     copy.resetSession()
+    eventLog.reset()
+    state.eventLog = []
     // DebugHud 的「累計輪數」：跟 perf（見上方說明）不同類——這只是一個計數器，
     // 沒有「歸零」的問題，每開一場新戰鬥就該加一，不需要 reset。
     perfSamples.rounds += 1
