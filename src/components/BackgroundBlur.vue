@@ -6,10 +6,10 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { personEllipse, smoothEllipse, growClearRegion, handCircles, carveHands } from '../core/blurRegion.js'
 
-// 背景模糊：在鏡頭畫面上蓋一層 backdrop-filter，用人像分割遮罩把「人」留清楚；
+// 去背：在鏡頭畫面上蓋一層純色（--c-bg），用人像分割遮罩把「人」留清楚；
 // 拿不到遮罩時退回用姿勢外框算的橢圓。
 // 跟骨架疊加層一樣只吃 onPoseFrame() 的推送，landmark 算完橢圓就丟。
-// 還沒偵測到人（開場）時整個畫面都先模糊，偵測到之後橢圓內才變清楚。
+// 還沒偵測到人（開場）時整個畫面都先蓋住，偵測到之後橢圓／人像範圍內才露出來。
 const props = defineProps({
   inference: { type: Object, default: null },
   video: { type: Object, default: null },
@@ -73,7 +73,7 @@ function onPose(landmarks) {
 
 const style = computed(() => {
   if (maskUrl.value) {
-    // 遮罩是原始影像方向；預覽是水平鏡像，所以把這層翻過來（模糊本身左右對稱，翻轉不影響畫面）。
+    // 遮罩是原始影像方向；預覽是水平鏡像，所以把這層翻過來（純色本身左右對稱，翻轉不影響畫面）。
     return {
       transform: 'scaleX(-1)',
       maskImage: maskUrl.value,
@@ -105,6 +105,6 @@ onBeforeUnmount(() => { off?.(); off = null; offMask?.(); offMask = null; offHan
 <style scoped>
 .bg-blur {
   position: absolute; inset: 0; pointer-events: none;
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  background: var(--c-bg); /* 去背：背景整個蓋掉，只剩人 */
 }
 </style>
