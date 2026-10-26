@@ -49,7 +49,8 @@ const taskStub = () => ({ detectForVideo: vi.fn(() => ({})), close: vi.fn() })
 vi.mock('@mediapipe/tasks-vision', () => ({
   FilesetResolver: { forVisionTasks: vi.fn().mockResolvedValue({}) },
   PoseLandmarker: { createFromOptions: vi.fn(async () => taskStub()) },
-  FaceLandmarker: { createFromOptions: vi.fn(async () => taskStub()) },
+  FaceLandmarker: { createFromOptions: vi.fn(async () => taskStub()), FACE_LANDMARKS_CONTOURS: [] },
+  HandLandmarker: { createFromOptions: vi.fn(async () => taskStub()), HAND_CONNECTIONS: [] },
   ObjectDetector: { createFromOptions: vi.fn(async () => taskStub()) },
 }))
 vi.stubGlobal('OffscreenCanvas', class {})

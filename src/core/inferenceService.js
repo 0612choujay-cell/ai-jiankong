@@ -1,4 +1,4 @@
-import { FilesetResolver, PoseLandmarker, FaceLandmarker, ObjectDetector } from '@mediapipe/tasks-vision'
+import { FilesetResolver, PoseLandmarker, FaceLandmarker, HandLandmarker, ObjectDetector } from '@mediapipe/tasks-vision'
 import { createScheduler } from './inferenceScheduler.js'
 import { poseMetrics, faceMetrics } from './poseGeometry.js'
 
@@ -213,6 +213,10 @@ export const MODEL_ASSET_PATHS = {
   object: '/models/efficientdet_lite0.tflite',
 }
 
+// 手部 21 點模型只為了畫面上的手部骨架（OpenPose 風格），不參與任何判斷，所以
+// 不放進上面那張表（離線暖機與 track 清單都不需要它）；載入失敗時只是少了手的線。
+const HAND_MODEL_PATH = '/models/hand_landmarker.task'
+
 /**
  * 建立唯一一塊給 MediaPipe 掛 GL context 用的 canvas。
  *
@@ -249,7 +253,7 @@ export function createInferenceService({ videoEl }) {
   // 就在描述一個不存在的世界。
   const base = { scale: 1, pose: true, face: true, object: true }
   let calibrationBoost = false
-  const tasks = { pose: null, face: null, object: null }
+  const tasks = { pose: null, face: null, object: null, hand: null }
   let inFlight = false
   let ready = false
   let latencyEma = 0
@@ -306,6 +310,29 @@ export function createInferenceService({ videoEl }) {
    * 會變成「整場偵測不到姿勢」——最差的一種耦合。所以逐一 try/catch 吞掉。
    */
   const poseObservers = []
+
+  // 臉部網格／手部骨架的畫面旁路：跟 poseObservers 同一條隱私紅線（原始座標只
+  // 活在訂閱者那一次呼叫裡，不得存起來），見 notifyPoseFrame 與 onPoseFrame。
+  const faceObservers = []
+  const handObservers = []
+
+  function notifyAll(list, landmarks) {
+    for (let i = 0; i < list.length; i += 1) {
+      try { list[i](landmarks) } catch { /* 訂閱者壞掉不得讓推論失敗 */ }
+    }
+  }
+
+  function subscribe(list, observer) {
+    if (typeof observer !== 'function') return () => {}
+    list.push(observer)
+    let live = true
+    return () => {
+      if (!live) return
+      live = false
+      const i = list.indexOf(observer)
+      if (i !== -1) list.splice(i, 1)
+    }
+  }
 
   function notifyPoseFrame(landmarks) {
     for (let i = 0; i < poseObservers.length; i += 1) {
@@ -428,6 +455,18 @@ export function createInferenceService({ videoEl }) {
           maxResults: 5,
         })
 
+        // 手部模型只服務畫面，載入失敗（檔案缺、記憶體不足）不得讓整個 init 失敗。
+        try {
+          tasks.hand = await HandLandmarker.createFromOptions(fileset, {
+            canvas,
+            baseOptions: { modelAssetPath: HAND_MODEL_PATH, delegate: 'GPU' },
+            runningMode: 'VIDEO',
+            numHands: 2,
+          })
+        } catch {
+          tasks.hand = null
+        }
+
         ready = true
         return { ok: true }
       } catch (error) {
@@ -454,6 +493,7 @@ export function createInferenceService({ videoEl }) {
         // 這一輪的原始 landmarks。**區域變數，不是模組狀態**——這一次 step()
         // 回傳之後它就失去參照（見上方 notifyPoseFrame 的完整說明）。
         let poseLandmarks = null
+        let faceLandmarks = null
         if (key === 'pose') {
           poseLandmarks = largestPose(tasks.pose.detectForVideo(videoEl, now))
           metrics = poseMetrics(poseLandmarks)
@@ -463,7 +503,8 @@ export function createInferenceService({ videoEl }) {
           // 見 poseGeometry.js 的 irisSideOffset() 完整說明）——這裡只是把它
           // 遞進 faceMetrics()，跟遞 blendshapes 同一個模式：原始座標一過
           // faceMetrics() 就變成純量，不會再流到別的地方。
-          metrics = faceMetrics(r?.faceBlendshapes?.[0]?.categories ?? null, r?.faceLandmarks?.[0] ?? null)
+          faceLandmarks = r?.faceLandmarks?.[0] ?? null
+          metrics = faceMetrics(r?.faceBlendshapes?.[0]?.categories ?? null, faceLandmarks)
         } else {
           const r = tasks.object.detectForVideo(videoEl, now)
           // 欄位名維持 `phoneVisible`：它的語意從一開始就是「現在有沒有不該
@@ -490,7 +531,18 @@ export function createInferenceService({ videoEl }) {
         // 一定在 latencyMs 算完之後（見 notifyPoseFrame 的說明）。pose 這一輪
         // 就算沒偵測到人也要通知（landmarks 為 null），否則畫布會卡在上一幀的
         // 殘影——「偵測不到」必須在畫面上看得出來，不能靜默地留著舊骨架。
-        if (key === 'pose') notifyPoseFrame(poseLandmarks)
+        if (key === 'pose') {
+          notifyPoseFrame(poseLandmarks)
+          // 手部只在有人訂閱（畫面上開著骨架）時才跑，且排在 latency 量完之後，
+          // 不會被算進降檔判準。
+          if (handObservers.length > 0 && tasks.hand) {
+            let hands = null
+            try { hands = tasks.hand.detectForVideo(videoEl, now)?.landmarks ?? null } catch { hands = null }
+            notifyAll(handObservers, hands)
+          }
+        } else if (key === 'face') {
+          notifyAll(faceObservers, faceLandmarks)
+        }
         return { key, metrics, latencyMs }
       } catch (error) {
         // 失敗也要排下一次，否則整條流程停住——這行不要改。
@@ -579,6 +631,10 @@ export function createInferenceService({ videoEl }) {
         if (i !== -1) poseObservers.splice(i, 1)
       }
     },
+    // 臉部網格（478 點）與手部骨架（每隻手 21 點）的訂閱入口。契約同 onPoseFrame：
+    // 呼叫回來就要用完、不得保存；沒偵測到時收到 null；回傳冪等的解除訂閱函式。
+    onFaceFrame: (observer) => subscribe(faceObservers, observer),
+    onHandFrame: (observer) => subscribe(handObservers, observer),
     actualFps: (key, now) => scheduler.actualFps(key, now),
     isReady: () => ready,
     // 白名單，不是 spread。spread 是「裡面有什麼就吐什麼」——哪天有人為了除錯
@@ -596,11 +652,13 @@ export function createInferenceService({ videoEl }) {
      */
     destroy() {
       for (const t of Object.values(tasks)) t?.close?.()
-      tasks.pose = tasks.face = tasks.object = null
+      tasks.pose = tasks.face = tasks.object = tasks.hand = null
       ready = false
       // 訂閱者清單一起清掉：整個 App 都要卸載了，留著一份指向已卸載元件的
       // 函式參照沒有任何用處，只是多一條可能讓元件活著的路。
       poseObservers.length = 0
+      faceObservers.length = 0
+      handObservers.length = 0
     },
   }
 }

@@ -7,6 +7,7 @@
            自己有沒有被看見。完整的隱私推導在 PoseSkeletonOverlay.vue 的檔頭。
            fit 必須跟下面 .cam 的 object-fit 一致（contain），有護欄鎖住。 -->
       <PoseSkeletonOverlay :inference="inference" :video="localVideo" fit="contain" />
+      <OpenPoseOverlay :inference="inference" :video="localVideo" fit="contain" />
       <div class="frame" :class="{ good: sampling && collected > 0 }" :style="frameRect" />
     </div>
 
@@ -54,6 +55,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { createCalibrationCollector } from '../core/calibration.js'
 import PoseSkeletonOverlay from './PoseSkeletonOverlay.vue'
+import OpenPoseOverlay from './OpenPoseOverlay.vue'
 
 const props = defineProps({
   camera: { type: Object, required: true },

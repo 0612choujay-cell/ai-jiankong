@@ -15,6 +15,7 @@
            跟骨架線本身走的原始座標通道完全獨立（見該元件檔頭的資料流圖）。
            校準畫面不傳這個 prop，維持它原本的固定色，理由寫在 prop 定義。 -->
       <PoseSkeletonOverlay :inference="inferenceSvc" :video="localVideo" fit="cover" :posture="s.posture" />
+      <OpenPoseOverlay :inference="inferenceSvc" :video="localVideo" fit="cover" />
       <div class="hero-hud">
         <HpBar label="你的體力" :value="battle?.playerHp ?? BATTLE.playerHpMax" :max="BATTLE.playerHpMax" side="hero" />
       </div>
@@ -213,6 +214,7 @@ import ConfirmDialog from './ConfirmDialog.vue'
 import StatusIndicator from './StatusIndicator.vue'
 import DebugHud from './DebugHud.vue'
 import PoseSkeletonOverlay from './PoseSkeletonOverlay.vue'
+import OpenPoseOverlay from './OpenPoseOverlay.vue'
 import { useSession } from '../stores/session.js'
 import { createMessageQueue, PRIORITY } from '../core/messageQueue.js'
 import { createPostureCoach } from '../core/postureCoach.js'

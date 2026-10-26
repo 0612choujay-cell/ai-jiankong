@@ -1782,8 +1782,9 @@ describe('BattleView：骨架線疊加層的接線與隱私', () => {
     const { el, app } = mount({ videoEl: null })
     await nextTick()
 
-    expect(onPoseFrameSpy).toHaveBeenCalledTimes(1)
-    expect(poseObservers.length).toBe(1)
+    // PoseSkeletonOverlay＋OpenPoseOverlay 各訂閱一次。
+    expect(onPoseFrameSpy).toHaveBeenCalledTimes(2)
+    expect(poseObservers.length).toBe(2)
 
     app.unmount()
     // 卸載後還留著訂閱＝推論每一幀都在呼叫一個已經不存在的畫面。

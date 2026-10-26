@@ -385,6 +385,13 @@ describe('CalibrationWizard 隱私護欄（複審 I-1：每幀拿到原始 r.met
       // 那條路，疊加層不得成為它的新入口。
       // （像素本身不在 DOM 字串裡，這一層擋的是屬性通道。）
       'canvas[aria-hidden="true"]',
+      // OpenPoseOverlay.vue：同一條屬性通道護欄，三張畫布（身體／臉／手）各兩個靜態屬性。
+      'canvas[aria-hidden="true"]',
+      'canvas[aria-hidden="true"]',
+      'canvas[aria-hidden="true"]',
+      'canvas[class="openpose"]',
+      'canvas[class="openpose"]',
+      'canvas[class="openpose"]',
       'canvas[class="skeleton"]',
       'div[class="arena"]',
       'div[class="arena__boss guide"]',
@@ -469,7 +476,7 @@ describe('CalibrationWizard 骨架線疊加層', () => {
     const { el, app } = mount({ camera: {}, inference, videoEl: null })
     await nextTick()
 
-    expect(inference.observers.length).toBe(1)
+    expect(inference.observers.length, 'PoseSkeletonOverlay＋OpenPoseOverlay 各訂閱一次').toBe(2)
     app.unmount()
     expect(inference.observers.length, '卸載後還留著訂閱＝推論每幀呼叫一個不存在的畫面').toBe(0)
     el.remove()
@@ -509,6 +516,13 @@ describe('CalibrationWizard 骨架線疊加層', () => {
     expect(attrInventory(el.querySelector('.arena'))).toEqual([
       'button[class="primary go"]',
       'canvas[aria-hidden="true"]',
+      // OpenPoseOverlay.vue：同一條屬性通道護欄，三張畫布（身體／臉／手）各兩個靜態屬性。
+      'canvas[aria-hidden="true"]',
+      'canvas[aria-hidden="true"]',
+      'canvas[aria-hidden="true"]',
+      'canvas[class="openpose"]',
+      'canvas[class="openpose"]',
+      'canvas[class="openpose"]',
       'canvas[class="skeleton"]',
       'div[class="arena"]',
       'div[class="arena__boss guide"]',

@@ -150,6 +150,8 @@ describe('onPoseFrame()：座標只用推的，而且只推那一幀', () => {
       'init',
       'isReady',
       'latencyEma',
+      'onFaceFrame',
+      'onHandFrame',
       'onPoseFrame',
       'setCalibrationBoost',
       'setEnabled',
