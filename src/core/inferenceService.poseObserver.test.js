@@ -194,7 +194,7 @@ describe('onPoseFrame()：不得碰到既有的壓縮界線', () => {
     // 純數字，不是座標，加進來不影響這條護欄要鎖的事。
     expect(Object.keys(r).sort()).toEqual(['key', 'latencyMs', 'metrics'])
     expect(Object.keys(r.metrics).sort()).toEqual(
-      ['earsValid', 'handNearRatio', 'neckRatio', 'shoulderWidth', 'tiltRatio', 'valid'],
+      ['earsValid', 'handNearRatio', 'neckRatio', 'shoulderSlope', 'shoulderWidth', 'tiltRatio', 'valid', 'wristShoulderRatio'],
     )
   })
 

@@ -292,3 +292,25 @@ describe('MAX_SAMPLE_GAP_MS：單一取樣區間的持有時間要有上限', ()
     expect(a.evaluate(5000).drowsy).toBe(false)
   })
 })
+
+describe('躺下／趴睡姿態（肩膀＋手腕）', () => {
+  const sit = { valid: true, earsValid: true, neckRatio: 1, shoulderWidth: 0.3, tiltRatio: 0, handNearRatio: Infinity, shoulderSlope: 0.05, wristShoulderRatio: 1.5 }
+  const feed = (a, m) => { for (let t = 0; t <= 5000; t += 500) a.pushPose({ t, metrics: m }) }
+
+  it('坐正寫字不算 drowsy', () => {
+    const a = makeAnalyzer(); feed(a, sit)
+    expect(a.evaluate(5000).drowsy).toBe(false)
+  })
+  it('兩肩連線接近垂直（側躺）持續超過 2 秒 → drowsy', () => {
+    const a = makeAnalyzer(); feed(a, { ...sit, shoulderSlope: 1.2 })
+    expect(a.evaluate(5000).drowsy).toBe(true)
+  })
+  it('手腕貼近肩線且頭沉下去（趴在手臂上）→ drowsy', () => {
+    const a = makeAnalyzer(); feed(a, { ...sit, wristShoulderRatio: 0.2, neckRatio: 0.1 })
+    expect(a.evaluate(5000).drowsy).toBe(true)
+  })
+  it('只有手腕靠近肩線、頭仍抬著（伸懶腰）不算 drowsy', () => {
+    const a = makeAnalyzer(); feed(a, { ...sit, wristShoulderRatio: 0.2 })
+    expect(a.evaluate(5000).drowsy).toBe(false)
+  })
+})

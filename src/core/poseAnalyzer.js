@@ -4,6 +4,17 @@ const WINDOW_MS = 6000
 const MIN_SAMPLES = 2
 
 /**
+ * 躺下／趴睡的姿態門檻（肩寬正規化）。跟 postureProfiles.js 的數字同一個性質：
+ * 是推算值，不是真機量出來的，下一輪用 ThresholdLab 校準。
+ *   - LYING_SLOPE：兩肩連線斜率超過 0.8（約 39°）＝側躺／身體橫過來。
+ *   - SLEEP_WRIST：手腕離肩線不到 0.5 個肩寬，且頭已經沉到肩線附近
+ *     （neckRatio < SLEEP_NECK）或耳朵被壓得看不到＝頭枕在手臂上趴著。
+ */
+const LYING_SLOPE = 0.8
+const SLEEP_WRIST = 0.5
+const SLEEP_NECK = 0.3
+
+/**
  * 單一取樣區間最多只能貢獻這麼多「持有時間」。
  * 零階保持假設「沒有新樣本時狀態不變」，這個假設在正常取樣節奏下成立，
  * 但推論卡住幾秒時就不成立了——那幾秒我們其實什麼都沒觀測到。
@@ -94,6 +105,16 @@ export function createPoseAnalyzer({ baseline, profile }) {
       const handPropped = (m) =>
         m.valid && m.earsValid !== false && (m.handNearRatio ?? Infinity) < profile.handPropRatio
 
+      // 躺下：兩肩連線接近垂直。趴睡：手靠近肩線，加上頭沉下去或看不到耳朵。
+      // 兩者都只算進 drowsy（跟閉眼同一條路：同樣要持續 drowsyHoldMs），不新增
+      // posture 值，所以下游的狀態機、教練文案、扣血規則都不用動。
+      const sleepPose = (m) =>
+        m.valid && (
+          (m.shoulderSlope ?? 0) > LYING_SLOPE
+          || ((m.wristShoulderRatio ?? Infinity) < SLEEP_WRIST
+              && (m.earsValid === false || m.neckRatio < SLEEP_NECK))
+        )
+
       const slouchPredicate = profile.requireBothForSlouch
         ? (m) => neckDropped(m) && shoulderGrown(m)
         : shoulderGrown
@@ -105,7 +126,8 @@ export function createPoseAnalyzer({ baseline, profile }) {
       const awayMs = heldMs(faceTrack, now, (m) => m.gaze === 'away')
       const closedMs = heldMs(faceTrack, now, (m) => m.eyeClosed)
 
-      const drowsy = (closedMs ?? 0) >= BATTLE.drowsyHoldMs
+      const sleepPoseMs = heldMs(poseTrack, now, sleepPose)
+      const drowsy = (closedMs ?? 0) >= BATTLE.drowsyHoldMs || (sleepPoseMs ?? 0) >= BATTLE.drowsyHoldMs
 
       // 互斥優先序：塌陷 > 前傾 > 撐頭 > 歪頭 > 視線偏移。
       // 撐頭／歪頭排在視線偏移之前：兩者都是看得到的坐姿問題，比「眼神飄走」

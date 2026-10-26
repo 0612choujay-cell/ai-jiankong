@@ -15,6 +15,7 @@ const MIN_SHOULDER_WIDTH = 0.02
 
 const INVALID = Object.freeze({
   neckRatio: 0, shoulderWidth: 0, tiltRatio: 0, handNearRatio: Infinity, earsValid: false, valid: false,
+  shoulderSlope: 0, wristShoulderRatio: Infinity,
 })
 
 function visible(p) {
@@ -43,13 +44,24 @@ export function poseMetrics(landmarks) {
   const shoulderWidth = Math.hypot(shR.x - shL.x, shR.y - shL.y)
   if (shoulderWidth < MIN_SHOULDER_WIDTH) return INVALID
 
+  // 躺下／趴睡的訊號，只需要肩膀（手腕可選），耳朵看不到時照樣能算：
+  // shoulderSlope＝兩肩連線的斜率（|Δy|/肩寬）。坐正時兩肩幾乎等高（≈0），
+  // 側躺時兩肩上下疊起來（≥1 代表連線已超過 45°）。
+  // wristShoulderRatio＝手腕離肩線的最小垂直距離（肩寬正規化）。趴在桌上把頭
+  // 枕在手臂上時，手腕會跟肩膀差不多高；寫字／打字時手腕明顯在肩線之下。
+  const shoulderSlope = Math.abs(shR.y - shL.y) / shoulderWidth
+  const shoulderMidY = (shL.y + shR.y) / 2
+  let wristShoulderRatio = Infinity
+  for (const w of [landmarks[WRIST_L], landmarks[WRIST_R]]) {
+    if (visible(w)) wristShoulderRatio = Math.min(wristShoulderRatio, Math.abs(w.y - shoulderMidY) / shoulderWidth)
+  }
+
   const earL = landmarks[EAR_L], earR = landmarks[EAR_R]
   const earsValid = visible(earL) && visible(earR)
 
   let neckRatio = 0, tiltRatio = 0, handNearRatio = Infinity
   if (earsValid) {
     const earMidY = (earL.y + earR.y) / 2
-    const shoulderMidY = (shL.y + shR.y) / 2
     // 影像座標 y 向下為正，所以「肩 − 耳」在頭抬起時為正值
     neckRatio = (shoulderMidY - earMidY) / shoulderWidth
     // 頭歪（歪頭靠向某一側肩膀）：兩耳的垂直落差，用肩寬正規化——正常抬頭
@@ -64,7 +76,7 @@ export function poseMetrics(landmarks) {
     if (visible(wristR)) handNearRatio = Math.min(handNearRatio, Math.hypot(wristR.x - earR.x, wristR.y - earR.y) / shoulderWidth)
   }
 
-  return { neckRatio, shoulderWidth, tiltRatio, handNearRatio, earsValid, valid: true }
+  return { neckRatio, shoulderWidth, tiltRatio, handNearRatio, earsValid, shoulderSlope, wristShoulderRatio, valid: true }
 }
 
 const EYE_CLOSED_THRESHOLD = 0.5
