@@ -72,6 +72,11 @@ const ALLOWED_URL_PREFIXES = [
     reason: 'Vue 執行期警告訊息裡附的說明文件連結，只會被印進 console，'
       + '不會被 fetch。（本專案的正式 bundle 連 console 都被 drop 掉了。）',
   },
+  {
+    prefix: 'https://rolldown.rs/in-depth/bundling-cjs',
+    reason: '打包工具（rolldown）為 CommonJS require 墊片附的錯誤說明文字，'
+      + '只會出現在 throw 的 Error 訊息裡，不會被 fetch。來自 onnxruntime-web 的 bundle。',
+  },
 ]
 
 /**

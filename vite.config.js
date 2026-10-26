@@ -2,8 +2,19 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 
+// onnxruntime-web 在模組載入時就 `console.log.bind(console)`，dropConsole 拿不掉。
+// 把它換成空函式，維持「正式 bundle 沒有任何 console 輸出」的隱私紅線。
+const silenceOrtConsole = {
+  name: 'silence-ort-console',
+  transform(code, id) {
+    if (!id.includes('onnxruntime-web')) return null
+    const out = code.replace(/console\.(log|error|warn|info)\.bind\(console\)/g, '(() => {})')
+    return out === code ? null : { code: out, map: null }
+  },
+}
+
 export default defineConfig({
-  plugins: [vue(), basicSsl()],
+  plugins: [vue(), basicSsl(), silenceOrtConsole],
   server: { https: true },
   // 隱私紅線：正式 bundle 不得殘留任何 console 輸出
   // 保留 esbuild.drop（brief 原始指定值）；但本專案實際裝出的 vite@8 已改用

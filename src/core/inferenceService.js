@@ -257,7 +257,7 @@ export function createInferenceService({ videoEl }) {
   // 就在描述一個不存在的世界。
   const base = { scale: 1, pose: true, face: true, object: true }
   let calibrationBoost = false
-  const tasks = { pose: null, face: null, object: null, hand: null }
+  const tasks = { pose: null, face: null, object: null, hand: null, yolo: null }
   let inFlight = false
   let ready = false
   let latencyEma = 0
@@ -493,13 +493,22 @@ export function createInferenceService({ videoEl }) {
           outputFaceBlendshapes: true,
           outputFacialTransformationMatrixes: false,
         })
-        tasks.object = await ObjectDetector.createFromOptions(fileset, {
-          canvas,
-          baseOptions: { modelAssetPath: MODEL_ASSET_PATHS.object, delegate: 'GPU' },
-          runningMode: 'VIDEO',
-          scoreThreshold: PHONE_MIN_SCORE,
-          maxResults: 5,
-        })
+        // 手機偵測優先用 YOLO（較準）；載入失敗（模型缺、記憶體不足）就退回
+        // MediaPipe 的 EfficientDet，不讓整個 init 失敗。
+        try {
+          const { createYoloDetector } = await import('./yoloDetector.js')
+          tasks.yolo = await createYoloDetector()
+          tasks.object = tasks.yolo
+        } catch {
+          tasks.yolo = null
+          tasks.object = await ObjectDetector.createFromOptions(fileset, {
+            canvas,
+            baseOptions: { modelAssetPath: MODEL_ASSET_PATHS.object, delegate: 'GPU' },
+            runningMode: 'VIDEO',
+            scoreThreshold: PHONE_MIN_SCORE,
+            maxResults: 5,
+          })
+        }
 
         // 手部模型只服務畫面，載入失敗（檔案缺、記憶體不足）不得讓整個 init 失敗。
         try {
@@ -553,7 +562,7 @@ export function createInferenceService({ videoEl }) {
           faceLandmarks = r?.faceLandmarks?.[0] ?? null
           metrics = faceMetrics(r?.faceBlendshapes?.[0]?.categories ?? null, faceLandmarks)
         } else {
-          const r = tasks.object.detectForVideo(videoEl, now)
+          const r = tasks.yolo ? await tasks.yolo.detect(videoEl) : tasks.object.detectForVideo(videoEl, now)
           // 欄位名維持 `phoneVisible`：它的語意從一開始就是「現在有沒有不該
           // 出現的東西」，只是當初清單裡只有手機。改名要動 session.js、
           // focusStateMachine.js、storageService 的 ALLOWED_FIELDS 白名單與
@@ -699,7 +708,7 @@ export function createInferenceService({ videoEl }) {
      */
     destroy() {
       for (const t of Object.values(tasks)) t?.close?.()
-      tasks.pose = tasks.face = tasks.object = tasks.hand = null
+      tasks.pose = tasks.face = tasks.object = tasks.hand = tasks.yolo = null
       ready = false
       // 訂閱者清單一起清掉：整個 App 都要卸載了，留著一份指向已卸載元件的
       // 函式參照沒有任何用處，只是多一條可能讓元件活著的路。
