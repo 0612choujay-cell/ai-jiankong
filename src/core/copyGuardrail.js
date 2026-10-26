@@ -548,12 +548,7 @@ export function collectVueLengthCandidates(file) {
  * 當時的人補上。
  */
 export const VUE_LENGTH_RULE_EXCEPTIONS = [
-  {
-    file: path.join('components', 'CalibrationWizard.vue'),
-    reason: '校準畫面的步驟說明與倒數文字：純模板文字，從不經過 copyEngine／'
-      + 'messageQueue／voiceFeedback，不會被朗讀、也不會被下一則訊息取代——'
-      + '不符合「短暫提示」的判準，適用整檔豁免。',
-  },
+
   // 以下三筆由 controller 在合併 Task 18/19/20 時補上。三個檔案都**親自查過
   // import**：都沒有 copyEngine／messageQueue／voiceFeedback，文字一律是靜態
   // v-if 掛載的模板節點，不會被朗讀、也不會被下一則訊息取代——符合整檔豁免的

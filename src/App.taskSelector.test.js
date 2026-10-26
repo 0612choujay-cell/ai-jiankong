@@ -97,23 +97,6 @@ const fakeSession = {
 
 vi.mock('./stores/session.js', () => ({ useSession: () => fakeSession }))
 
-// CalibrationWizard 本身已經有自己的測試（CalibrationWizard.mount.test.js），
-// 真的跑一次它的 5 秒取樣迴圈在這裡既慢又脆弱。這裡換成一個一按就 emit 'done'
-// 的假元件，只用來驅動「App.vue 真正的 @done="onCalibrated" 這條線」——
-// 跟直接呼叫 fakeSession.setCalibration() 的差別：那樣寫完全繞過了 App.vue 的
-// onCalibrated()，實作改壞了測試也測不出來（實測過：確實測不出來）。
-//
-// 它同時把拿到的 task-type prop 顯示出來：App.vue 有沒有真的把任務類型傳下去，
-// 是這一輪的核心接線，而這裡是唯一看得到那個 prop 的地方。
-vi.mock('./components/CalibrationWizard.vue', () => ({
-  default: {
-    props: ['camera', 'inference', 'videoEl', 'taskType'],
-    emits: ['done'],
-    template: '<button class="fake-calibration-done" @click="$emit(\'done\', { calibratedAt: 1 })">'
-      + 'FAKE_DONE:{{ taskType }}</button>',
-  },
-}))
-
 import App from './App.vue'
 
 function mount() {
@@ -165,49 +148,6 @@ describe('App.vue【分任務校準】：選任務 → 校準 → 開打', () =>
     expect(calls.setCalibration).toEqual([null])
     expect(calls.startBattle).toBe(1)
     expect(fakeState.screen).toBe('battle')
-
-    app.unmount()
-    el.remove()
-  })
-
-  it('校準畫面拿得到這一次的任務類型（姿勢指示要靠它分四種）', async () => {
-    fakeState.screen = 'calibrate'
-    fakeState.taskType = 'vocab'
-    resetCalls()
-    const { el, app } = mount()
-    await nextTick()
-
-    // App.vue 的 :task-type="s.taskType"。少了這條 prop，校準畫面會退回
-    // 預設的 'custom'，四種任務又變回同一句通用指示——而且畫面上看起來
-    // 完全正常（那正是這一輪要修的問題本身）。
-    const wizard = el.querySelector('.fake-calibration-done')
-    expect(wizard.textContent).toBe('FAKE_DONE:vocab')
-
-    app.unmount()
-    el.remove()
-  })
-
-  it('CalibrationWizard 的 done 事件：setCalibration() 之後**直接**開打，不再回任務畫面', async () => {
-    fakeState.screen = 'calibrate'
-    resetCalls()
-    const { el, app } = mount()
-    await nextTick()
-
-    const doneButton = el.querySelector('.fake-calibration-done')
-    expect(doneButton).not.toBeNull()
-    doneButton.click() // 觸發真正的 App.vue @done="onCalibrated"
-    await nextTick()
-    await nextTick()
-
-    expect(calls.setCalibration.length, '校準結果要存進 store').toBe(1)
-    expect(calls.startBattle, '校準完成就開打').toBe(1)
-    expect(fakeState.screen).toBe('battle')
-    // 順序不能反：startBattle() 讀 state.profile 去建 poseAnalyzer，反過來
-    // 這一場就跑在**上一位訪客**的基準上（而且沒有任何錯誤訊息）。
-    expect(orderLog).toEqual(['setCalibration', 'startBattle'])
-    // 中間不得再經過任務畫面——任務早就選好了，多一個畫面就是多一次「按下去
-    // 才會開始」，這個年齡層每多一步都是流失。
-    expect(fakeSession.enterTaskSelect).not.toHaveBeenCalled()
 
     app.unmount()
     el.remove()

@@ -488,13 +488,11 @@ describe('效能：每幀零配置、不重配 backing store', () => {
 // ===========================================================================
 
 const BATTLE_SRC = readFileSync(path.join(SRC_DIR, 'components', 'BattleView.vue'), 'utf8')
-const CALIB_SRC = readFileSync(path.join(SRC_DIR, 'components', 'CalibrationWizard.vue'), 'utf8')
 const POSE_GEOMETRY_SRC = readFileSync(path.join(SRC_DIR, 'core', 'poseGeometry.js'), 'utf8')
 const TOKENS_SRC = readFileSync(path.join(SRC_DIR, 'styles', 'tokens.css'), 'utf8')
 
 const HOSTS = [
   { name: 'BattleView.vue', source: BATTLE_SRC, fit: 'cover' },
-  { name: 'CalibrationWizard.vue', source: CALIB_SRC, fit: 'contain' },
 ]
 
 describe('兩套真相護欄', () => {

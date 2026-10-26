@@ -105,9 +105,6 @@ vi.mock('./components/OfflineWarmup.vue', () => ({
 vi.mock('./components/BattleView.vue', () => ({
   default: { props: ['videoEl'], emits: ['finish'], template: '<div class="fake-battle" />' },
 }))
-vi.mock('./components/CalibrationWizard.vue', () => ({
-  default: { emits: ['done'], template: '<div class="fake-calibration" />' },
-}))
 
 const { default: App } = await import('./App.vue')
 

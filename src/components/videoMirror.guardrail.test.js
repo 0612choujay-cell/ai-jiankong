@@ -55,7 +55,7 @@ describe('鏡像預覽的 <video> 必須真的會播放（實機驗收抓到的�
     expect(
       mirrors.map((m) => m.name).sort(),
       '判準抓不到任何元件，代表判準本身壞了（例如 ref 名稱被改過）',
-    ).toEqual(['BattleView.vue', 'CalibrationWizard.vue'])
+    ).toEqual(['BattleView.vue'])
   })
 
   it('每一個鏡像預覽的 <video> 都有 autoplay 屬性', () => {

@@ -12,37 +12,6 @@
     @granted="onGranted"
   />
 
-  <!-- 這裡曾經有一個 `:restore-scale="s.perfMode ? 0.5 : 1"`，連同一段說明
-       「就算這裡傳錯，下一次轉場就會修正」的註解。**兩者都已經拿掉。**
-
-       複審用探針實測證明那段「自癒」推理在流程反轉之後不成立了：
-       `CalibrationWizard` 的卸載被排進 `startBattle()` 的 await 之中，所以
-       元件的 `restore()` 是開打前**最後一個**寫推論倍率的人，它後面沒有
-       下一次轉場——下一件事就是 rAF 迴圈開始讀 `inference.step()`。
-       一段宣稱有安全網、而安全網已經不在的註解，比沒有註解更危險。
-
-       現在校準期間的提頻是 `inferenceService` 的一個**疊加層**
-       （`setCalibrationBoost()`），元件不再持有任何值，也就沒有「傳錯」這件事，
-       `DOWNSHIFT_SCALE` 那個 0.5 也不再需要在這裡多一份。完整推導寫在
-       `inferenceService.setCalibrationBoost()` 與 `CalibrationWizard.restore()`。 -->
-  <!-- task-type（【分任務校準】）：校準量的是耳朵相對於肩膀的高度，而抬頭看
-       螢幕、低頭寫作業、書攤在桌上、單字卡拿在手上，這個數字每一種都不一樣。
-       流程改成「選任務 → 校準」之後，這個畫面才第一次知道等一下要做什麼，
-       指示也才能是「那個任務真實會有的姿勢」。
-
-       傳 prop 而不是讓元件自己讀 store：這個元件目前是純 props
-       （camera／inference／videoEl），保持那個性質才測得動——
-       它的測試是 createApp(CalibrationWizard, props) 直接掛載，沒有 store，
-       一旦元件裡出現 useSession() 就得在每個測試檔補一份 mock。 -->
-  <CalibrationWizard
-    v-else-if="s.screen === 'calibrate' && s.booted"
-    :camera="session.camera()"
-    :inference="session.inference()"
-    :video-el="videoEl"
-    :task-type="s.taskType"
-    @done="onCalibrated"
-  />
-
   <TaskSelector
     v-else-if="s.screen === 'task'"
     @start="onTaskChosen"
@@ -368,7 +337,6 @@
 import { ref, onBeforeUnmount } from 'vue'
 import PrivacyNotice from './components/PrivacyNotice.vue'
 import PermissionGate from './components/PermissionGate.vue'
-import CalibrationWizard from './components/CalibrationWizard.vue'
 import TaskSelector from './components/TaskSelector.vue'
 import BattleView from './components/BattleView.vue'
 import StatsDashboard from './components/StatsDashboard.vue'
@@ -398,30 +366,6 @@ const videoEl = ref(null)
 // 也就是真的要用鏡頭的那一刻）。
 function onGranted() {
   session.enterTaskSelect()
-}
-
-// 校準完成 → 直接開打（【分任務校準】：任務在進校準之前就選好了，沒有「回到
-// 選任務」這一步了）。
-//
-// 兩個呼叫、順序不能反：setCalibration() 先把基準寫進 state.profile，
-// startBattle() 才拿它去建 poseAnalyzer（session.js 的 `baseline: state.profile`）。
-// 反過來的話這一場會跑在**上一位訪客**的基準上——正是「展場輪流玩」家族那幾個
-// bug 的形狀，而且一樣沒有任何錯誤訊息。中間刻意沒有 await，兩行在同一個
-// 同步堆疊內跑完，順序由語言本身保證。
-//
-// 為什麼是兩個呼叫而不是讓 setCalibration() 自己開打：見 session.js 的
-// setCalibration() 上方（把它變成「設一個欄位、順便開一整場戰鬥」的方法，會讓
-// 七個測試檔裡那些只想鋪設 profile 的地方安靜地多開一場戰鬥）。這一條線的
-// 護欄因此裝在**這個呼叫點**上（App.taskSelector.test.js 的 spy 斷言），
-// 不是裝在 store 方法裡——Ruling DK。
-async function onCalibrated(profile) {
-  session.setCalibration(profile)
-  // await：startBattle() 從第 6 輪起有 await（重開鏡頭可能要一次完整的
-  // getUserMedia），不 await 等於把它的錯誤丟掉。注意光是 await 不能消除
-  // 那段空窗——setScreen() 是同步的，戰鬥畫面（含「結束」按鈕）在 await
-  // 期間就已經渲染出來了——真正擋住空窗操作的是 startBattle() 內部的世代
-  // 比對（見 session.js 的 myFrameGen／myCamGen）。
-  await session.startBattle()
 }
 
 async function onTaskChosen(payload) {
