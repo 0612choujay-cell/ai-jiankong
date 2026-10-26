@@ -293,36 +293,7 @@
     </div>
   </template>
 
-  <!-- 「換人玩」的第二個入口（Ruling DY）：結算畫面的角落。
-       結算畫面是上一位訪客的最後一個畫面，也正是工作人員把 iPad 交給下一位
-       的時機。這顆按鈕當初存在的理由是：在它出現之前，全 App 只有第一位訪客
-       會走到校準，之後每一位都跑在第一位的校準基準上——症狀是「整場一直說他
-       駝背」或「整場都不反應」，而且沒有任何錯誤訊息。
-       StatsDashboard.vue 不是本工項的檔案，所以入口做在 App.vue 這一層。
-
-       【分任務校準】之後它帶去的是**選任務**畫面（不是直接進校準）：新訪客
-       要自己選任務，而校準的姿勢指示依賴任務類型。重新校準的保證沒有變弱
-       ——任務畫面唯一的出口就是「準備開始」，而那條路一定經過校準。
-
-       二次確認：這顆按鈕小孩碰得到，按下去會離開他正在看的成績。確認對話框
-       用既有的 ConfirmDialog（跟 SettingsSheet 清除紀錄同一個元件、同一種
-       語氣），不新發明一種。
-
-       版面（手算）：按鈕是 fixed 右上角，寬 = 3 個字 ×17px + 左右各 16px
-       padding ≈ 83px，高 44（--tap-min），佔 x ∈ [W-99, W-16]、y ∈ [16, 60]。
-       StatsDashboard 的 `.hero` 第一行 `.result` 是 34px 置中文字（最長 8 字
-       ≈ 272px），右緣 x ≈ W/2 + 136；兩者不相交的條件是 W ≥ 470px，iPad Pro
-       直向 834／橫向 1194 都成立（餘裕分別 115px、295px）。第二行 `.headline`
-       起於 y ≈ 16 + 41 + 8 = 65，在按鈕下緣 60 之下，也不相交。
-       已知邊界：視窗寬度小於 470px（iPad 的 Slide Over）時會和 `.result`
-       重疊——展場是 standalone 全螢幕，不在支援範圍內，這裡記錄而不假裝。 -->
-  <button
-    v-if="s.screen === 'stats'"
-    class="corner-exit" type="button" @click="askNewVisitor"
-  >
-    換人玩
-  </button>
-
+  <!-- 結算畫面的「換人玩」角落按鈕已移除（使用者要求）；換人玩只剩工作人員設定面板那一個入口。 -->
   <ConfirmDialog
     v-if="confirmNewVisitor"
     title="要換下一位嗎？"
@@ -614,19 +585,5 @@ onBeforeUnmount(() => {
   background: transparent;
   outline: 2px solid var(--c-accent);
   color: var(--c-text);
-}
-
-/* 結算畫面角落的「換人玩」：次要樣式（不是實心強調色）——底部那兩顆
-   「再討伐一次／回主畫面」才是這個畫面的主動作，這一顆是交接用的出口。 */
-.corner-exit {
-  position: fixed;
-  top: max(var(--gap), env(safe-area-inset-top));
-  right: max(var(--gap), env(safe-area-inset-right));
-  z-index: 7;
-  min-height: var(--tap-min);
-  padding: 0 16px;
-  background: transparent;
-  outline: 2px solid var(--c-text-dim);
-  color: var(--c-text-dim);
 }
 </style>

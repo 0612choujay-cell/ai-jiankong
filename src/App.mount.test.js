@@ -638,16 +638,14 @@ describe('隱私紅線：屬性通道（複審 B-1，Blocking）', () => {
     fakeState.screen = 'privacy'
   })
 
-  it('結算畫面的「換人玩」出口不得夾帶任何狀態（複審用 :data-profile 攻過這一顆）', async () => {
+  it('結算畫面沒有「換人玩」按鈕，且畫面不夾帶任何狀態', async () => {
     fakeState.booted = true
     fakeState.screen = 'stats'
     const { el, app } = mount()
     await nextTick()
 
-    expect(attrInventory(el.querySelector('.corner-exit'))).toEqual([
-      'button[class="corner-exit"]',
-      'button[type="button"]',
-    ])
+    expect(textButton(el, '換人玩')).toBeUndefined()
+    expect(el.querySelector('.corner-exit')).toBeNull()
     expectNoPrivacyLeak(el)
 
     app.unmount()
@@ -853,37 +851,6 @@ describe('Task 22c B：ThresholdLab 的入口與畫面', () => {
 })
 
 describe('Task 22c D：換人玩（Ruling DY）', () => {
-  it('結算畫面角落有出口，二次確認之後才呼叫 session.startNewVisitor()', async () => {
-    fakeSession.startNewVisitor.mockClear()
-    fakeState.booted = true
-    fakeState.screen = 'stats'
-    const { el, app } = mount()
-    await nextTick()
-
-    const exit = textButton(el, '換人玩')
-    expect(exit, '結算畫面是工作人員交接 iPad 的時機，出口要長在這裡').not.toBeUndefined()
-    expect(exit.textContent.trim().length).toBeLessThanOrEqual(15)
-
-    exit.click()
-    await nextTick()
-    // 這顆按鈕小孩碰得到，而按下去會離開他正在看的成績——先確認。
-    expect(fakeSession.startNewVisitor).not.toHaveBeenCalled()
-    textButton(el, '先不要').click()
-    await nextTick()
-    expect(fakeSession.startNewVisitor).not.toHaveBeenCalled()
-
-    textButton(el, '換人玩').click()
-    await nextTick()
-    textButton(el, '好，換下一位').click()
-    await nextTick()
-    // Ruling DK：轉場走 store 方法，不是在 App.vue 這裡自己寫一套。
-    expect(fakeSession.startNewVisitor).toHaveBeenCalledTimes(1)
-
-    app.unmount()
-    el.remove()
-    fakeState.screen = 'privacy'
-  })
-
   it('確認框開著時，底下那一列入口按不到——不得再按進量測畫面（複審 I-2）', async () => {
     fakeSession.enterLab.mockClear()
     const { el, app } = openSettings()
