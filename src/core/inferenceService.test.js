@@ -333,13 +333,37 @@ describe('Blocking B2：「東西必須夠大」閘門（桌上的東西 vs 房�
     }
   }
 
-  async function phoneVisibleFor(detections, videoEl = fakeVideo()) {
+  // 手機偵測只認「人的範圍」內的東西：先跑一輪 pose 讓服務知道人在哪裡。
+  // 預設人佔滿整個畫面（所有既有的面積／類別測試不受影響）；
+  // 傳 personBox 可以把人縮到畫面的一小塊，測「背景清空」。
+  function personLandmarks({ x0 = 0, y0 = 0, x1 = 1, y1 = 1 } = {}) {
+    return Array.from({ length: 33 }, (_, i) => ({
+      x: i % 2 === 0 ? x0 : x1, y: i % 3 === 0 ? y0 : y1, z: 0, visibility: 0.9,
+    }))
+  }
+
+  async function phoneVisibleFor(detections, videoEl = fakeVideo(), personBox = {}) {
     const svc = await initSvc(videoEl)
+    schedulerMocks.pick.mockReturnValueOnce('pose')
+    taskMocks.pose.detectForVideo.mockReturnValueOnce({ landmarks: [personLandmarks(personBox)] })
+    await svc.step(50)
     schedulerMocks.pick.mockReturnValue('object')
     taskMocks.object.detectForVideo.mockReturnValue({ detections })
     const r = await svc.step(100)
     return r.metrics.phoneVisible
   }
+
+  it('背景清空：手機在人的範圍外（背景／別人手上）不算數', async () => {
+    // 人只佔畫面右下角 (0.6–1.0)；detection() 的框在左上角 (10,10) 附近。
+    expect(await phoneVisibleFor([detection(0.01)], fakeVideo(), { x0: 0.6, y0: 0.6, x1: 1, y1: 1 })).toBe(false)
+  })
+
+  it('背景清空：沒有偵測到人的時候不判手機', async () => {
+    const svc = await initSvc(fakeVideo())
+    schedulerMocks.pick.mockReturnValue('object')
+    taskMocks.object.detectForVideo.mockReturnValue({ detections: [detection(0.01)] })
+    expect((await svc.step(100)).metrics.phoneVisible).toBe(false)
+  })
 
   it('桌上的手機（面積 1%）算數', async () => {
     expect(await phoneVisibleFor([detection(0.01)])).toBe(true)
@@ -375,6 +399,9 @@ describe('Blocking B2：「東西必須夠大」閘門（桌上的東西 vs 房�
 
   it('隱私紅線：往外走的只有一個布林值，bounding box 與類別名稱都不得外流', async () => {
     const svc = await initSvc()
+    schedulerMocks.pick.mockReturnValueOnce('pose')
+    taskMocks.pose.detectForVideo.mockReturnValueOnce({ landmarks: [personLandmarks()] })
+    await svc.step(50)
     schedulerMocks.pick.mockReturnValue('object')
     taskMocks.object.detectForVideo.mockReturnValue({
       detections: [detection(0.01, 'cell phone')],

@@ -215,6 +215,10 @@ export const MODEL_ASSET_PATHS = {
 
 // 手部 21 點模型只為了畫面上的手部骨架（OpenPose 風格），不參與任何判斷，所以
 // 不放進上面那張表（離線暖機與 track 清單都不需要它）；載入失敗時只是少了手的線。
+// 人的範圍外框往外放大的比例，與「超過多久沒更新就當作沒有人」。
+const PERSON_BOX_MARGIN = 0.25
+const PERSON_BOX_MAX_AGE_MS = 5000
+
 const HAND_MODEL_PATH = '/models/hand_landmarker.task'
 
 /**
@@ -403,6 +407,48 @@ export function createInferenceService({ videoEl }) {
     }
   }
 
+  /**
+   * 「背景清空，只看人」：手機偵測只認落在「人的範圍」裡的東西。
+   *
+   * 人的範圍＝最近一次 pose 偵測到的全身關鍵點（含雙手）的外框，往外放大
+   * PERSON_BOX_MARGIN。桌上、背景、別人手上的手機都在範圍外，不算數；拿在
+   * 自己手上的手機在範圍內（手腕／手指本身就是關鍵點）。
+   *
+   * 這個外框只有四個數字，只活在這個閉包裡、只給 inPersonRegion() 用，不匯出、
+   * 不進 metrics、不進 store——跟 poseMetrics 把座標壓成純量是同一個界線。
+   * 外框超過 PERSON_BOX_MAX_AGE_MS 沒更新（人離開了／pose 卡住）就視為「沒有人」，
+   * 這時不判手機：誤判的代價比漏抓高（見下面 isBigEnough 的說明）。
+   */
+  let personBox = null // { x0, y0, x1, y1, at }（正規化座標）
+
+  function updatePersonBox(landmarks, now) {
+    if (!Array.isArray(landmarks) || landmarks.length === 0) return
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+    for (let i = 0; i < landmarks.length; i += 1) {
+      const p = landmarks[i]
+      if (!p || (p.visibility !== undefined && p.visibility < 0.5)) continue
+      if (p.x < x0) x0 = p.x
+      if (p.x > x1) x1 = p.x
+      if (p.y < y0) y0 = p.y
+      if (p.y > y1) y1 = p.y
+    }
+    if (!(x1 > x0) || !(y1 > y0)) return
+    const mx = (x1 - x0) * PERSON_BOX_MARGIN
+    const my = (y1 - y0) * PERSON_BOX_MARGIN
+    personBox = { x0: x0 - mx, y0: y0 - my, x1: x1 + mx, y1: y1 + my, at: now }
+  }
+
+  function inPersonRegion(box, now) {
+    if (!personBox || now - personBox.at > PERSON_BOX_MAX_AGE_MS) return false
+    const w = videoEl?.videoWidth ?? 0
+    const h = videoEl?.videoHeight ?? 0
+    if (!(w > 0 && h > 0) || !box) return false
+    // MediaPipe 的 boundingBox 是像素座標；用中心點判斷是否落在人的範圍內。
+    const cx = ((box.originX ?? 0) + (box.width ?? 0) / 2) / w
+    const cy = ((box.originY ?? 0) + (box.height ?? 0) / 2) / h
+    return cx >= personBox.x0 && cx <= personBox.x1 && cy >= personBox.y0 && cy <= personBox.y1
+  }
+
   function isBigEnough(box) {
     const frameArea = (videoEl?.videoWidth ?? 0) * (videoEl?.videoHeight ?? 0)
     if (!(frameArea > 0)) return false
@@ -496,6 +542,7 @@ export function createInferenceService({ videoEl }) {
         let faceLandmarks = null
         if (key === 'pose') {
           poseLandmarks = largestPose(tasks.pose.detectForVideo(videoEl, now))
+          updatePersonBox(poseLandmarks, now)
           metrics = poseMetrics(poseLandmarks)
         } else if (key === 'face') {
           const r = tasks.face.detectForVideo(videoEl, now)
@@ -517,7 +564,7 @@ export function createInferenceService({ videoEl }) {
           // 送出去的話，「這個小孩桌上有什麼」就變成可以被記錄的東西了。
           // 下面的 bbox 只用來算一個面積比，算完就失去參照。
           const phoneVisible = (r?.detections ?? []).some((d) =>
-            isBigEnough(d.boundingBox) && (d.categories ?? []).some(
+            isBigEnough(d.boundingBox) && inPersonRegion(d.boundingBox, now) && (d.categories ?? []).some(
               (c) => DISTRACTING_LABELS.includes(c.categoryName) && c.score >= PHONE_MIN_SCORE,
             ))
           metrics = { phoneVisible }
@@ -659,6 +706,7 @@ export function createInferenceService({ videoEl }) {
       poseObservers.length = 0
       faceObservers.length = 0
       handObservers.length = 0
+      personBox = null
     },
   }
 }
