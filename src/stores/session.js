@@ -96,6 +96,8 @@ const state = reactive({
   historyError: null,
   profile: null,
   taskType: 'homework',
+  // 「自己選」時使用者打的任務名稱，只在戰鬥畫面顯示，不存檔。
+  taskLabel: '',
   durationMin: DEFAULT_DURATION_MIN,
   demoMode: false,
   // 隱私紅線：這裡以下四個欄位是唯一允許存進 reactive state 的推論相關資料——
@@ -1406,7 +1408,8 @@ const api = {
     state.profile = profile
   },
 
-  setTask({ taskType, durationMin, demoMode }) {
+  setTask({ taskType, durationMin, demoMode, taskLabel }) {
+    state.taskLabel = typeof taskLabel === 'string' ? taskLabel.slice(0, 15) : ''
     state.taskType = taskType
     state.durationMin = durationMin
     state.demoMode = Boolean(demoMode)

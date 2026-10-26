@@ -180,6 +180,7 @@
     <div class="corner-tl status" @click="bumpHud">
       <span class="clock">{{ clockText }}</span>
       <span class="score">{{ battle?.score ?? 0 }} 分</span>
+      <span v-if="s.taskLabel" class="task-label">{{ s.taskLabel }}</span>
       <!-- Important 5：這顆按鈕是 corner-tl 這個 div 的子節點，而 corner-tl
            自己掛了 @click="bumpHud"（見下面 bumpHud() 的說明）。原生 click
            事件會冒泡，沒有 .stop 的話，每次點靜音鈕 bumpHud() 也會被觸發
@@ -1135,6 +1136,7 @@ onBeforeUnmount(() => {
 .status { display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
 .clock { font-size: var(--fs-title); font-weight: 700; }
 .score { font-size: var(--fs-body); color: var(--c-text-dim); }
+.task-label { font-size: var(--fs-body); color: var(--c-text); }
 .event-log { position: absolute; left: var(--gap); top: 30%; z-index: 4; }
 .log-photo { background: none; border: 0; color: inherit; font: inherit; padding: 4px 0; cursor: zoom-in; }
 .event-log-list { margin: 4px 0 0; padding: 6px 10px; list-style: none; font-size: 14px;

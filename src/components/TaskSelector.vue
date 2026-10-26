@@ -14,6 +14,15 @@
       </button>
     </div>
 
+    <!-- 選「自己選」時，讓使用者打字寫下這次要做什麼（只顯示在戰鬥畫面，不存檔、不上傳）。 -->
+    <label v-if="taskType === 'custom'" class="custom-label">
+      <span>這次要做什麼？</span>
+      <input
+        v-model="customLabel" type="text" maxlength="15" placeholder="例如：畫圖、練琴譜"
+        autocomplete="off" enterkeyhint="done"
+      >
+    </label>
+
     <h2>要專心多久？</h2>
 
     <div class="stepper">
@@ -93,6 +102,7 @@ const TASKS = [
 // 預設值已選好，直接按開始就能玩——這個年齡層不該被強迫先做選擇才能進遊戲。
 const taskType = ref('homework')
 const durationMin = ref(DEFAULT_DURATION_MIN)
+const customLabel = ref('')
 
 // 魔王血量永遠用一般模式（非展示）算給使用者看：展示模式血量是固定的
 // DEMO.bossHp、跟這裡調的時長無關，顯示一般模式的數字才有參考意義。
@@ -103,7 +113,10 @@ function bump(delta) {
 }
 
 function emitStart(demoMode) {
-  emit('start', { taskType: taskType.value, durationMin: durationMin.value, demoMode })
+  const payload = { taskType: taskType.value, durationMin: durationMin.value, demoMode }
+  const label = customLabel.value.trim()
+  if (taskType.value === 'custom' && label) payload.taskLabel = label
+  emit('start', payload)
 }
 </script>
 
@@ -122,6 +135,11 @@ h2 { font-size: var(--fs-title); margin: 0; }
 .minutes { font-size: var(--fs-title); min-width: 140px; }
 .minutes strong { font-size: 40px; }
 .preset { min-width: 88px; min-height: var(--tap-min); }
+.custom-label { display: flex; flex-direction: column; gap: 6px; align-items: center; font-size: var(--fs-body); }
+.custom-label input {
+  min-height: var(--tap-min); width: min(320px, 90vw); padding: 0 12px; font-size: var(--fs-body);
+  color: var(--c-text); background: var(--c-surface); border: 2px solid var(--c-accent); border-radius: 10px;
+}
 .boss-hp { color: var(--c-text-dim); font-size: var(--fs-body); margin: 0; }
 .go { min-width: 260px; }
 .demo { min-height: var(--tap-min); color: var(--c-text-dim); background: transparent; }

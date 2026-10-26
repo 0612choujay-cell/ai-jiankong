@@ -261,3 +261,28 @@ describe('TaskSelector：文案紅線（單句 ≤15 字、無禁用詞）', () 
     el.remove()
   })
 })
+
+describe('TaskSelector：自己選可以打字', () => {
+  it('選「自己選」才出現輸入框，開始時把輸入的名稱一起送出', async () => {
+    let payload = null
+    const { el, app } = mountWithHandler('start', (p) => { payload = p })
+
+    expect(el.querySelector('input[type="text"]')).toBeNull()
+    const custom = [...el.querySelectorAll('[role="radio"]')].find((r) => r.textContent.includes('自己選'))
+    custom.click()
+    await nextTick()
+
+    const input = el.querySelector('input[type="text"]')
+    expect(input).not.toBeNull()
+    expect(input.maxLength).toBe(15)
+    input.value = '  畫圖  '
+    input.dispatchEvent(new Event('input'))
+    await nextTick()
+
+    el.querySelector('.go').click()
+    expect(payload).toMatchObject({ taskType: 'custom', taskLabel: '畫圖' })
+
+    app.unmount()
+    el.remove()
+  })
+})

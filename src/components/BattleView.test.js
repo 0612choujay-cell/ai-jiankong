@@ -207,6 +207,7 @@ beforeEach(() => {
   fakeState.screen = 'battle'
   fakeState.battle = makeBattle()
   fakeState.posture = 'upright'
+  fakeState.taskLabel = ''
   fakeState.drowsy = false
   fakeState.paused = false
   fakeState.perfMode = false
