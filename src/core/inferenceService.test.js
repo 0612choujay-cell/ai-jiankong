@@ -495,19 +495,3 @@ describe('Blocking B1：校準疊加層與基準層的合成（順序無關）',
     expect(stateB.scale, '降檔中的倍率不得被校準還原打回全解析度').toBe(0.5)
   })
 })
-
-describe('maskToBackgroundAlpha', () => {
-  it('maps person confidence to background alpha (person clear, background blurred)', async () => {
-    const { maskToBackgroundAlpha } = await import('./inferenceService.js')
-    const w = 4
-    const h = 2
-    const conf = new Float32Array([1, 1, 0, 0, 1, 0.55, 0, 0])
-    const out = maskToBackgroundAlpha({ width: w, height: h, getAsFloat32Array: () => conf })
-    expect(out.w).toBe(4)
-    expect(out.h).toBe(2)
-    expect(out.data[0]).toBe(0) // 人
-    expect(out.data[2]).toBe(255) // 背景
-    expect(out.data[5]).toBeGreaterThan(0) // 邊緣過渡
-    expect(out.data[5]).toBeLessThan(255)
-  })
-})

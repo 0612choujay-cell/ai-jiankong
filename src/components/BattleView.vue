@@ -15,7 +15,6 @@
            'slouch' / 'forwardHead' / 'gazeAway'），早就被壓縮成安全彙總值，
            跟骨架線本身走的原始座標通道完全獨立（見該元件檔頭的資料流圖）。
            校準畫面不傳這個 prop，維持它原本的固定色，理由寫在 prop 定義。 -->
-        <BackgroundBlur :inference="inferenceSvc" :video="localVideo" />
         <PoseSkeletonOverlay :inference="inferenceSvc" :video="localVideo" fit="cover" :posture="s.posture" />
         <OpenPoseOverlay :inference="inferenceSvc" :video="localVideo" fit="cover" />
       </ChestZoomLayer>
@@ -235,7 +234,6 @@ import {
 import HpBar from './HpBar.vue'
 import PhotoLightbox from './PhotoLightbox.vue'
 import ChestZoomLayer from './ChestZoomLayer.vue'
-import BackgroundBlur from './BackgroundBlur.vue'
 import BossSprite from './BossSprite.vue'
 import CoachBanner from './CoachBanner.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
