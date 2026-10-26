@@ -3,6 +3,7 @@ import { createCameraCapture } from '../core/cameraCapture.js'
 import { createInferenceService } from '../core/inferenceService.js'
 import { createPerfMonitor } from '../core/perfMonitor.js'
 import { createPoseAnalyzer } from '../core/poseAnalyzer.js'
+import { createCalibrationCollector } from '../core/calibration.js'
 import { createFocusStateMachine } from '../core/focusStateMachine.js'
 import { createWakeLock } from '../core/wakeLock.js'
 import { createVoiceFeedback } from '../core/voiceFeedback.js'
@@ -585,6 +586,12 @@ function syncInferenceScale() {
   inference?.setScale(state.perfMode ? DOWNSHIFT_SCALE : 1)
 }
 
+// 沒有校準畫面的流程：開打後前 AUTO_CAL_MS 靜默取樣，用同一個中位數收集器
+// 算出基準，期間不判姿勢（用沒校準的預設值判會亂報）。pose 約 2fps，8 秒才湊得
+// 滿 MIN_SAMPLES；取樣不足就一直收到夠為止，不阻擋遊戲。
+const AUTO_CAL_MS = 8000
+let autoBaseline = null // { collector, baseline, startedAt } | null
+
 async function frame(gen) {
   try {
     const now = performance.now()
@@ -601,6 +608,16 @@ async function frame(gen) {
       pushSample(perfSamples.latency, r.latencyMs)
       if (r.key === 'pose') {
         analyzer.pushPose({ t: now, metrics: r.metrics })
+        if (autoBaseline) {
+          autoBaseline.collector.add(r.metrics)
+          const res = autoBaseline.collector.result()
+          if (res.ok && now - autoBaseline.startedAt >= AUTO_CAL_MS) {
+            // 就地改寫：analyzer 每次 evaluate 都重讀 baseline 物件的欄位。
+            Object.assign(autoBaseline.baseline, res.profile, { calibratedAt: Date.now() })
+            state.profile = autoBaseline.baseline
+            autoBaseline = null
+          }
+        }
         if (r.metrics?.valid) lastValidPoseAt = now
       } else if (r.key === 'face') {
         analyzer.pushFace({ t: now, metrics: r.metrics })
@@ -659,6 +676,8 @@ async function frame(gen) {
     if (fsm) {
       if (scoringAllowed()) {
         const e = analyzer.evaluate(now)
+        // 還在靜默校準：姿勢一律視為端正（基準還是預設值，判出來沒有意義）。
+        if (autoBaseline) e.posture = 'upright'
         state.posture = e.posture
         state.drowsy = e.drowsy
         const events = fsm.tick({
@@ -1367,7 +1386,14 @@ const api = {
     // 沒有「歸零」的問題，每開一場新戰鬥就該加一，不需要 reset。
     perfSamples.rounds += 1
 
-    analyzer = createPoseAnalyzer({ baseline: state.profile, profile: profileFor(state.taskType) })
+    // state.profile 為 null＝這一場還沒有基準（跳過了校準畫面）：先給一組預設值
+    // 讓 analyzer 能建起來，開打後再靜默取樣覆寫。
+    const baseline = state.profile
+      ?? { id: 'auto', baselineNeckRatio: 1, baselineShoulderWidth: 0.3, calibratedAt: null }
+    autoBaseline = state.profile
+      ? null
+      : { collector: createCalibrationCollector(), baseline, startedAt: performance.now() }
+    analyzer = createPoseAnalyzer({ baseline, profile: profileFor(state.taskType) })
     fsm = createFocusStateMachine({ durationMs: durationMs(), demoMode: state.demoMode })
     fsmPausedCombined = false
     state.battle = fsm.snapshot()

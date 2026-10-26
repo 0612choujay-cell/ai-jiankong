@@ -247,8 +247,8 @@ describe('App.vue：privacy → permission → task（Task 19；【分任務校�
 // 家——從 onGranted() 搬到 onTaskChosen()（選完任務才進校準）。onGranted()
 // 現在呼叫的是同步的 enterTaskSelect()，所以那一行不再需要 await。
 describe('App.vue：畫面轉場一律走 store 方法（複審第 1 輪 B3，原始碼文字護欄）', () => {
-  it('轉場都走 store 方法（含 onTaskChosen() 的 await enterCalibration()），且整個檔案不得出現 rawState.screen 賦值', () => {
-    expect(appSource).toContain('await session.enterCalibration()')
+  it('轉場都走 store 方法（onTaskChosen() 直接 await startBattle()），且整個檔案不得出現 rawState.screen 賦值', () => {
+    expect(appSource).not.toContain('session.enterCalibration()')
     expect(appSource).toContain('session.enterTaskSelect()')
     expect(appSource).toContain('session.enterPermission()')
     // 刻意**沒有**在這裡加一條 `toContain('await session.startBattle()')`：

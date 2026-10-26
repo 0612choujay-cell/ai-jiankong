@@ -147,7 +147,7 @@ function chooseTaskAndGo(el, label) {
 }
 
 describe('App.vue【分任務校準】：選任務 → 校準 → 開打', () => {
-  it('TaskSelector 的 start 事件：setTask() 之後走 enterCalibration()，而且**不得**直接開打', async () => {
+  it('TaskSelector 的 start 事件：setTask() → 清掉上一位的基準 → 開打，不再經過校準畫面', async () => {
     fakeState.screen = 'task'
     resetCalls()
     const { el, app } = mount()
@@ -159,23 +159,22 @@ describe('App.vue【分任務校準】：選任務 → 校準 → 開打', () =>
     await nextTick()
 
     expect(calls.setTask).toEqual([{ taskType: 'reading', durationMin: 15, demoMode: false }])
-    expect(fakeSession.enterCalibration, '選完任務要先進校準').toHaveBeenCalledTimes(1)
-    // 這一條就是流程反轉的全部：舊版在這裡直接 startBattle()，校準因此永遠
-    // 發生在「還不知道要做什麼」的時候，只能給一句對三種任務都成立的話。
-    expect(calls.startBattle, '選完任務不得直接開打——中間要先校準').toBe(0)
-    expect(fakeState.screen).toBe('calibrate')
+    // 校準畫面已移除：基準改由 session.js 開打後前 8 秒靜默取樣。
+    // setCalibration(null) 清掉上一位訪客的基準，否則這一場會跑在別人的基準上。
+    expect(fakeSession.enterCalibration, '不再進校準畫面').not.toHaveBeenCalled()
+    expect(calls.setCalibration).toEqual([null])
+    expect(calls.startBattle).toBe(1)
+    expect(fakeState.screen).toBe('battle')
 
     app.unmount()
     el.remove()
   })
 
   it('校準畫面拿得到這一次的任務類型（姿勢指示要靠它分四種）', async () => {
-    fakeState.screen = 'task'
+    fakeState.screen = 'calibrate'
+    fakeState.taskType = 'vocab'
     resetCalls()
     const { el, app } = mount()
-    await nextTick()
-
-    chooseTaskAndGo(el, '背單字')
     await nextTick()
 
     // App.vue 的 :task-type="s.taskType"。少了這條 prop，校準畫面會退回
@@ -214,7 +213,7 @@ describe('App.vue【分任務校準】：選任務 → 校準 → 開打', () =>
     el.remove()
   })
 
-  it('primeVoiceFromGesture() 在 setTask() 之前、setTask() 在 enterCalibration() 之前，且全部在同一個同步呼叫堆疊內', () => {
+  it('primeVoiceFromGesture() 在 setTask() 之前、setTask() 在 setCalibration(null)／startBattle() 之前，且在同一個同步呼叫堆疊內', () => {
     fakeState.screen = 'task'
     resetCalls()
     const { el, app } = mount()
@@ -230,8 +229,8 @@ describe('App.vue【分任務校準】：選任務 → 校準 → 開打', () =>
     //   【分任務校準】重新確認：這顆按鈕、這個 handler、這一行的位置都沒變，
     //   變的只是它後面去哪裡；解鎖在 primeVoiceFromGesture() 當場就完成，
     //   跟「第一句真正的台詞多久之後才出現」無關（校準那 5 秒不影響）。
-    // - `setTask` 排在 `enterCalibration` 之前：校準畫面要讀 state.taskType。
-    expect(orderLog).toEqual(['prime', 'setTask', 'enterCalibration'])
+    // - `setTask` 排在後面兩個之前：startBattle() 要讀 state.taskType。
+    expect(orderLog).toEqual(['prime', 'setTask', 'setCalibration', 'startBattle'])
 
     app.unmount()
     el.remove()
@@ -282,16 +281,16 @@ describe("I-9：App.vue 的 'task' 分支不得長出第二個出口（結構護
     expect(tag[0]).toContain('onTaskChosen')
   })
 
-  it('onTaskChosen() 通往 enterCalibration()，而且不得自己開打', () => {
+  it('onTaskChosen() 先清掉上一位的基準再開打，不再經過校準畫面', () => {
     const code = codeOnly(APP_SOURCE)
     const body = code.match(/async function onTaskChosen\([\s\S]*?\n\}/)
     expect(body, 'onTaskChosen() 必須存在').not.toBeNull()
 
-    expect(body[0], '選完任務的下一站一定是校準').toContain('session.enterCalibration(')
-    expect(
-      body[0],
-      "從 'task' 直接開打就是 accident #3 的形狀：下一位小孩跑在上一位的校準基準上",
-    ).not.toContain('startBattle')
+    expect(body[0]).not.toContain('enterCalibration')
+    // accident #3 的形狀是「下一位小孩跑在上一位的校準基準上」：直接開打可以，
+    // 但一定要先 setCalibration(null)，而且順序不能反。
+    expect(body[0].indexOf('session.setCalibration(null)')).toBeGreaterThan(-1)
+    expect(body[0].indexOf('session.setCalibration(null)')).toBeLessThan(body[0].indexOf('session.startBattle()'))
   })
 
   it('TaskSelector 自己也不得直接碰 session（出口只能經過 App.vue 的 handler）', () => {

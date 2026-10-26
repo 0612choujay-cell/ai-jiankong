@@ -439,14 +439,11 @@ async function onTaskChosen(payload) {
   // primeVoiceFromGesture()。
   session.primeVoiceFromGesture()
   session.setTask(payload)
-  // 順序：setTask() 一定要在 enterCalibration() 之前——校準畫面要讀
-  // state.taskType 決定顯示哪一組姿勢指示，反了就是拿上一位訪客的任務去
-  // 指示這一位（而畫面上看起來一切正常）。
-  //
-  // await：enterCalibration() 的非同步層在 stream 已經被 pagehide 停掉時會
-  // 重新 getUserMedia，不 await 的話畫面會先切過去、鏡頭晚幾百毫秒才接上
-  // （而且錯誤結果會被丟掉）。
-  await session.enterCalibration()
+  // 沒有校準畫面了：清掉上一位訪客的基準，開打後由 session.js 在前 8 秒
+  // 靜默取樣建立新的（見 AUTO_CAL_MS）。順序仍是 setTask → setCalibration →
+  // startBattle，startBattle() 讀 state.profile 建 analyzer。
+  session.setCalibration(null)
+  await session.startBattle()
 }
 
 async function onAgain() {
