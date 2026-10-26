@@ -2,7 +2,7 @@ import { FilesetResolver, PoseLandmarker, FaceLandmarker, HandLandmarker, Object
 import { createScheduler } from './inferenceScheduler.js'
 import { poseMetrics, faceMetrics } from './poseGeometry.js'
 
-const SPECS = [{ key: 'pose', fps: 20 }, { key: 'face', fps: 2 }, { key: 'object', fps: 0.33 }]
+const SPECS = [{ key: 'pose', fps: 30 }, { key: 'face', fps: 1 }, { key: 'object', fps: 0.33 }]
 /**
  * 「不該出現在書桌上的東西」的清單。
  *
@@ -593,9 +593,9 @@ export function createInferenceService({ videoEl }) {
           notifyPoseFrame(poseLandmarks)
           // 手部只在有人訂閱（畫面上開著骨架）時才跑，且排在 latency 量完之後，
           // 不會被算進降檔判準。
-          // 手部偵測隔一輪跑一次：姿勢拉到 20fps 後，每輪都跑手會把整條迴圈拖慢。
+          // 手部偵測每三輪跑一次：姿勢拉到 30fps 後，每輪都跑手會把整條迴圈拖慢。
           poseStepCount += 1
-          if (handObservers.length > 0 && tasks.hand && poseStepCount % 2 === 0) {
+          if (handObservers.length > 0 && tasks.hand && poseStepCount % 3 === 0) {
             let hands = null
             try { hands = tasks.hand.detectForVideo(videoEl, now)?.landmarks ?? null } catch { hands = null }
             notifyAll(handObservers, hands)
