@@ -35,11 +35,7 @@
       </ul>
     </section>
 
-    <div v-if="openEvent" class="lightbox" role="dialog" aria-modal="true" @click="openEvent = null">
-      <img :src="openEvent.photo" :alt="describe(openEvent)">
-      <p>{{ describe(openEvent) }}</p>
-      <button type="button" class="primary" @click.stop="openEvent = null">關閉</button>
-    </div>
+    <PhotoLightbox v-if="openEvent" :photo="openEvent.photo" :caption="describe(openEvent)" @close="openEvent = null" />
 
     <section class="charts">
       <figure><figcaption>時間都花在哪</figcaption><canvas ref="pieEl" /></figure>
@@ -81,6 +77,7 @@ import {
   RadarController, RadialLinearScale, LinearScale, CategoryScale, Tooltip,
 } from 'chart.js'
 import { radarAxes } from '../core/radar.js'
+import PhotoLightbox from './PhotoLightbox.vue'
 import { EVENT_REASON_DETAIL, formatElapsed } from '../core/eventLog.js'
 import { buildSummary } from '../core/summary.js'
 import { needsBreakAfter } from '../core/battleConfig.js'
@@ -195,11 +192,8 @@ onBeforeUnmount(() => { for (const c of charts) c.destroy() })
 
 <style scoped>
 .event-photos ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.event-photos li { width: 150px; font-size: 13px; }
+.event-photos li { width: 220px; font-size: 13px; }
 .photo-btn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
-.lightbox { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 12px; padding: 16px; background: rgba(0, 0, 0, .85); color: #fff; }
-.lightbox img { max-width: 100%; max-height: 70vh; border-radius: 8px; }
 .event-photos img { display: block; width: 100%; border-radius: 8px; }
 
 .stats {
