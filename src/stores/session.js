@@ -616,6 +616,8 @@ async function frame(gen) {
             Object.assign(autoBaseline.baseline, res.profile, { calibratedAt: Date.now() })
             state.profile = autoBaseline.baseline
             autoBaseline = null
+            // 暖機期間累積的取樣是用預設基準量的，丟掉，正式判定從乾淨的窗口開始。
+            analyzer.reset()
           }
         }
         if (r.metrics?.valid) lastValidPoseAt = now
@@ -626,6 +628,10 @@ async function frame(gen) {
         state.phoneVisible = Boolean(r.metrics.phoneVisible)
       }
     }
+
+    // 暖機（靜默校準）期間畫面還在穩定，桌上原本就有的東西、剛進入畫面的雜訊
+    // 都不算分心：不開手機陷阱、不敲鑼。暖機結束後才從「畫面乾淨」重新開始。
+    if (autoBaseline) state.phoneVisible = false
 
     const health = inference.health()
     // object track 卡住到一定次數，陳舊的 phoneVisible 讀數就不可信了——保守側
