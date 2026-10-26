@@ -4,8 +4,9 @@
          <video>，不搬動 App.vue 那顆真正接了 getUserMedia 的節點——跟
          CalibrationWizard 是同一個既有模式）。 -->
     <section class="arena__hero" :class="{ struck: heroStruck }">
-      <video ref="localVideo" class="cam" playsinline muted autoplay />
-      <!-- 骨架線疊加層：讓小孩看得到系統「看到」他的哪幾個點（兩肩＋頸線）。
+      <ChestZoomLayer :inference="inferenceSvc" :video="localVideo">
+        <video ref="localVideo" class="cam" playsinline muted autoplay />
+        <!-- 骨架線疊加層：讓小孩看得到系統「看到」他的哪幾個點（兩肩＋頸線）。
            它只吃 inference 的 onPoseFrame() 推送，畫完即丟——完整的隱私推導
            在 PoseSkeletonOverlay.vue 的檔頭。fit 必須跟下面 .cam 的
            object-fit 一致（cover），那是兩套真相的典型形狀，有護欄鎖住。
@@ -14,8 +15,9 @@
            'slouch' / 'forwardHead' / 'gazeAway'），早就被壓縮成安全彙總值，
            跟骨架線本身走的原始座標通道完全獨立（見該元件檔頭的資料流圖）。
            校準畫面不傳這個 prop，維持它原本的固定色，理由寫在 prop 定義。 -->
-      <PoseSkeletonOverlay :inference="inferenceSvc" :video="localVideo" fit="cover" :posture="s.posture" />
-      <OpenPoseOverlay :inference="inferenceSvc" :video="localVideo" fit="cover" />
+        <PoseSkeletonOverlay :inference="inferenceSvc" :video="localVideo" fit="cover" :posture="s.posture" />
+        <OpenPoseOverlay :inference="inferenceSvc" :video="localVideo" fit="cover" />
+      </ChestZoomLayer>
       <div class="hero-hud">
         <HpBar label="你的體力" :value="battle?.playerHp ?? BATTLE.playerHpMax" :max="BATTLE.playerHpMax" side="hero" />
       </div>
@@ -230,6 +232,7 @@ import {
 } from 'vue'
 import HpBar from './HpBar.vue'
 import PhotoLightbox from './PhotoLightbox.vue'
+import ChestZoomLayer from './ChestZoomLayer.vue'
 import BossSprite from './BossSprite.vue'
 import CoachBanner from './CoachBanner.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
