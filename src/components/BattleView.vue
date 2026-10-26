@@ -100,13 +100,17 @@
            / bossUltimate，後者由 ultimates 陣列推導 / bossAttacking）加上
            battle.phase。上面 .arena__boss 的 class 與這裡的 prop 綁的是
            同一組，不是第二套狀態機。BossSprite 自己不讀 store、不計時。 -->
-      <BossSprite
-        :struck="bossStruck"
-        :charging="hasPendingTrap"
-        :ultimate="bossUltimate"
-        :attacking="bossAttacking"
-        :phase="battle?.phase ?? 1"
-      />
+      <div class="boss-clock">
+        <p class="boss-clock__count" aria-hidden="true">{{ clockText }}</p>
+        <ClockFace
+          :remain-ms="Math.max(0, (battle?.durationMs ?? 0) - (battle?.elapsedMs ?? 0))"
+          :struck="bossStruck"
+          :charging="hasPendingTrap"
+          :ultimate="bossUltimate"
+          :attacking="bossAttacking"
+          :phase="battle?.phase ?? 1"
+        />
+      </div>
     </section>
 
     <!-- 姿態邊緣提示：使用者要求「異常就在人像那直接顯示、畫面邊緣閃漸層
@@ -207,7 +211,7 @@ import {
   ref, reactive, computed, onMounted, onBeforeUnmount,
 } from 'vue'
 import HpBar from './HpBar.vue'
-import BossSprite from './BossSprite.vue'
+import ClockFace from './ClockFace.vue'
 import CoachBanner from './CoachBanner.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import StatusIndicator from './StatusIndicator.vue'
@@ -1072,6 +1076,8 @@ onBeforeUnmount(() => {
 /* --- 角落 --- */
 .status { display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
 .clock { font-size: var(--fs-title); font-weight: 700; }
+.boss-clock { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.boss-clock__count { margin: 0; font-size: var(--fs-title); font-weight: 800; font-variant-numeric: tabular-nums; }
 .score { font-size: var(--fs-body); color: var(--c-text-dim); }
 .mute { min-height: var(--tap-min); padding: 0 12px; font-size: var(--fs-body); }
 .pause, .stop {
