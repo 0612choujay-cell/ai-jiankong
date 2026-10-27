@@ -1,5 +1,5 @@
 /**
- * 拿出手機時的提醒：敲一聲鑼，再念「分心了，手機收起來」。
+ * 拿出手機時的提醒：敲一聲鑼，再念「Stop scrolling」。
  *
  * 這是使用者明確要求的行為，刻意推翻原本「手機／離開類提示一律不朗讀」的
  * 保護（data/copy/posture.js 的 NO_VOICE_POSTURE_KEYS 是為了不把被抓包的事
@@ -7,7 +7,8 @@
  * 手機一出現就響，之後每 PHONE_ALERT_REPEAT_MS 重複，直到手機離開畫面。
  * 仍然遵守角落的 🔊／🔇 開關（由呼叫端判斷）。
  */
-export const PHONE_ALERT_TEXT = '分心了，手機收起來'
+export const PHONE_ALERT_TEXT = 'Stop scrolling'
+export const PHONE_ALERT_LANG = 'en-US'
 // 手機在畫面上就每隔這麼久再敲一次、再念一次，直到收起來為止。
 export const PHONE_ALERT_REPEAT_MS = 6000
 

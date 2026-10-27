@@ -77,7 +77,7 @@ export function createVoiceFeedback() {
      * messageQueue 吐出的訊息），這裡不重新判斷。
      * @returns {boolean} 這次呼叫是否真的把 utterance 送出去播放。
      */
-    speak(text, priority = 0) {
+    speak(text, priority = 0, { lang = null } = {}) {
       if (!enabled || !available || !primed || !text) return false
       const synth = window.speechSynthesis
       if (synth.speaking) {
@@ -88,8 +88,14 @@ export function createVoiceFeedback() {
         synth.cancel()
       }
       const u = new SpeechSynthesisUtterance(text.slice(0, MAX_CHARS))
-      u.voice = voice
-      u.lang = voice?.lang ?? 'zh-TW'
+      // 指定 lang（例如英文提示）時挑該語言的語音；找不到就退回預設中文語音。
+      const v = lang
+        ? (window.speechSynthesis.getVoices?.() ?? []).find((x) => x.lang === lang)
+          ?? (window.speechSynthesis.getVoices?.() ?? []).find((x) => x.lang?.startsWith(lang.slice(0, 2)))
+          ?? voice
+        : voice
+      u.voice = v
+      u.lang = lang ?? v?.lang ?? 'zh-TW'
       u.rate = 1
       u.volume = 1 // 語音音量固定最大
       // 讓「目前在念的優先權」回到 -1（等於沒有東西在念），下一句任何優先權

@@ -248,7 +248,7 @@ import { createPostureCoach } from '../core/postureCoach.js'
 import { EVENT_REASON_LABEL } from '../core/eventLog.js'
 import { copyKeyForEvent } from '../core/bossDialogue.js'
 import { BATTLE } from '../core/battleConfig.js'
-import { playGong, playRoar, PHONE_ALERT_TEXT, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
+import { playGong, playRoar, PHONE_ALERT_TEXT, PHONE_ALERT_LANG, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
 
 const props = defineProps({
   // App.vue 唯一那顆真正接了 getUserMedia 的 <video>（跟 CalibrationWizard
@@ -712,7 +712,7 @@ function phoneAlertOnce() {
   if (!s.voiceEnabled) return
   playGong(gongCtx)
   // 比戰鬥旁白高一級，才能搶佔正在念的句子。
-  session.voice().speak(PHONE_ALERT_TEXT, PRIORITY.trap)
+  session.voice().speak(PHONE_ALERT_TEXT, PRIORITY.trap, { lang: PHONE_ALERT_LANG })
 }
 function stopPhoneAlert() {
   clearTimeout(roarTimer)
