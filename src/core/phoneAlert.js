@@ -1,5 +1,5 @@
 /**
- * 拿出手機時的提醒：敲一聲鑼，再念「Stop scrolling」。
+ * 拿出手機時的提醒：敲一聲鑼，再念「不要再滑了」。
  *
  * 這是使用者明確要求的行為，刻意推翻原本「手機／離開類提示一律不朗讀」的
  * 保護（data/copy/posture.js 的 NO_VOICE_POSTURE_KEYS 是為了不把被抓包的事
@@ -7,8 +7,8 @@
  * 手機一出現就響，之後每 PHONE_ALERT_REPEAT_MS 重複，直到手機離開畫面。
  * 仍然遵守角落的 🔊／🔇 開關（由呼叫端判斷）。
  */
-export const PHONE_ALERT_TEXT = 'Stop scrolling'
-export const PHONE_ALERT_LANG = 'en-US'
+export const PHONE_ALERT_TEXT = '不要再滑了'
+export const PHONE_ALERT_LANG = 'zh-TW'
 // 手機在畫面上就每隔這麼久再敲一次、再念一次，直到收起來為止。
 export const PHONE_ALERT_REPEAT_MS = 6000
 
@@ -91,6 +91,30 @@ export function playRoar(ctx) {
     noise.buffer = buf
     noise.connect(lp)
     noise.start(t0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 直接用瀏覽器語音念一句（取代原本的吼叫聲），不經過 🔊／🔇 開關。
+ * 需要之前已有使用者手勢解鎖過語音（開戰按鈕那次 primeVoiceFromGesture）。
+ * @returns {boolean} 有沒有送出。
+ */
+export function speakNow(text, lang = PHONE_ALERT_LANG) {
+  try {
+    const synth = window.speechSynthesis
+    if (!synth || !text) return false
+    synth.cancel()
+    const u = new SpeechSynthesisUtterance(text)
+    const voices = synth.getVoices?.() ?? []
+    const v = voices.find((x) => x.lang === lang) ?? voices.find((x) => x.lang?.startsWith(lang.slice(0, 2))) ?? null
+    if (v) u.voice = v
+    u.lang = v?.lang ?? lang
+    u.volume = 1
+    u.rate = 1
+    synth.speak(u)
     return true
   } catch {
     return false

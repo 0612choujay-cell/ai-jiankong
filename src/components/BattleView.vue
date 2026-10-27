@@ -103,7 +103,7 @@
            / bossUltimate，後者由 ultimates 陣列推導 / bossAttacking）加上
            battle.phase。上面 .arena__boss 的 class 與這裡的 prop 綁的是
            同一組，不是第二套狀態機。BossSprite 自己不讀 store、不計時。 -->
-      <p v-if="roaring" class="roar-text" aria-hidden="true">吼！！</p>
+      <p v-if="roaring" class="roar-text" aria-hidden="true">{{ PHONE_ALERT_TEXT }}！</p>
       <BossSprite
         :struck="bossStruck"
         :charging="hasPendingTrap"
@@ -248,7 +248,7 @@ import { createPostureCoach } from '../core/postureCoach.js'
 import { EVENT_REASON_LABEL } from '../core/eventLog.js'
 import { copyKeyForEvent } from '../core/bossDialogue.js'
 import { BATTLE } from '../core/battleConfig.js'
-import { playGong, playRoar, PHONE_ALERT_TEXT, PHONE_ALERT_LANG, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
+import { playGong, speakNow, PHONE_ALERT_TEXT, PHONE_ALERT_LANG, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
 
 const props = defineProps({
   // App.vue 唯一那顆真正接了 getUserMedia 的 <video>（跟 CalibrationWizard
@@ -701,18 +701,16 @@ const roaring = ref(false)
 let roarTimer = 0
 function phoneAlertOnce() {
   if (!s.phoneVisible) return
-  // 魔王吼叫＋畫面震動：不受 🔊／🔇 開關影響（那顆只管念出來的話）。
+  // 魔王大喊＋畫面震動：不受 🔊／🔇 開關影響。
   roaring.value = true
   clearTimeout(roarTimer)
   roarTimer = setTimeout(() => { roaring.value = false }, 1200)
   try {
     gongCtx = gongCtx || new (window.AudioContext || window.webkitAudioContext)()
   } catch { gongCtx = null }
-  playRoar(gongCtx)
-  if (!s.voiceEnabled) return
-  playGong(gongCtx)
-  // 比戰鬥旁白高一級，才能搶佔正在念的句子。
-  session.voice().speak(PHONE_ALERT_TEXT, PRIORITY.trap, { lang: PHONE_ALERT_LANG })
+  // 吼叫改成魔王大喊「不要再滑了」：直接念，不受 🔊／🔇 開關影響。
+  speakNow(PHONE_ALERT_TEXT, PHONE_ALERT_LANG)
+  if (s.voiceEnabled) playGong(gongCtx)
 }
 function stopPhoneAlert() {
   clearTimeout(roarTimer)
@@ -1149,7 +1147,7 @@ onBeforeUnmount(() => {
 .event-log { position: absolute; left: var(--gap); top: 30%; z-index: 4; }
 .roar-text {
   position: absolute; left: 50%; top: 18%; transform: translateX(-50%); z-index: 5; margin: 0;
-  font-size: 64px; font-weight: 900; color: #fff; text-shadow: 0 0 16px var(--c-danger), 0 4px 0 var(--c-danger);
+  font-size: 56px; font-weight: 900; white-space: nowrap; color: #fff; text-shadow: 0 0 16px var(--c-danger), 0 4px 0 var(--c-danger);
   pointer-events: none;
 }
 .arena__boss.roaring { animation: roar-shake .12s linear 9; box-shadow: inset 0 0 80px var(--c-danger); }
