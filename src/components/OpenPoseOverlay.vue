@@ -37,8 +37,6 @@ const ARM_LINES = [
   [15, 17], [15, 19], [15, 21], [17, 19],
   [16, 18], [16, 20], [16, 22], [18, 20],
 ]
-// 臉部粗點：鼻 0、眼 2/5、耳 7/8、嘴角 9/10（pose 模型自帶，臉網格沒偵測到時的備援）。
-const FACE_DOTS = [0, 2, 5, 7, 8, 9, 10]
 
 const bodyEl = ref(null)
 const faceEl = ref(null)
@@ -120,10 +118,6 @@ function drawBody(lm) {
   }
   ctx.fillStyle = '#fff'
   for (let i = 11; i <= 22; i += 1) if (ok(lm[i])) dot(ctx, lm[i], lw * 1.1, ox, oy, sx, sy)
-  for (let i = 0; i < FACE_DOTS.length; i += 1) {
-    const p = lm[FACE_DOTS[i]]
-    if (ok(p)) dot(ctx, p, lw * 0.9, ox, oy, sx, sy)
-  }
 }
 
 function drawHands(hands) {

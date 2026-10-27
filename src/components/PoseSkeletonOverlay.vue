@@ -275,15 +275,13 @@ function draw(landmarks) {
   ctx.lineTo(shMidX, shMidY)
   ctx.stroke()
 
-  // 三個關節點：兩肩＋頸線頂端。半徑跟線寬連動，不另外發明尺寸。
+  // 兩個關節點：兩肩（頸線頂端在臉上，使用者要求不畫點）。半徑跟線寬連動，不另外發明尺寸。
   const r = lw * 0.9
   ctx.beginPath()
   ctx.moveTo(shLx + r, shLy)
   ctx.arc(shLx, shLy, r, 0, Math.PI * 2)
   ctx.moveTo(shRx + r, shRy)
   ctx.arc(shRx, shRy, r, 0, Math.PI * 2)
-  ctx.moveTo(earMidX + r, earMidY)
-  ctx.arc(earMidX, earMidY, r, 0, Math.PI * 2)
   ctx.fill()
 }
 

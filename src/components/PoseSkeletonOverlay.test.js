@@ -295,7 +295,7 @@ describe('資料流：訂閱 inference.onPoseFrame()，卸載時解除', () => {
 // 3. 繪圖：畫哪幾條線、座標怎麼換算
 // ===========================================================================
 
-describe('繪圖：兩條線（肩線、頸線）＋三個關節點', () => {
+describe('繪圖：兩條線（肩線、頸線）＋兩個關節點', () => {
   function drawOnce(landmarks, props = {}) {
     const inference = makeInference()
     const mounted = mount({ inference, video: fakeVideo(), ...props })
@@ -310,7 +310,7 @@ describe('繪圖：兩條線（肩線、頸線）＋三個關節點', () => {
     expect(callsOf('stroke').length).toBe(1)
     // 肩線（moveTo+lineTo）＋頸線（moveTo+lineTo）
     expect(callsOf('lineTo').length, '肩線與頸線，剛好兩條線段').toBe(2)
-    expect(callsOf('arc').length, '兩肩＋頸線頂端，三個關節點').toBe(3)
+    expect(callsOf('arc').length, '兩肩兩個關節點（臉上不畫點）').toBe(2)
     expect(callsOf('fill').length).toBe(1)
 
     app.unmount()
@@ -476,7 +476,7 @@ describe('效能：每幀零配置、不重配 backing store', () => {
     const second = ctx.calls.length - first
 
     expect(second).toBe(first)
-    expect(first, '一幀＝clearRect+2×beginPath+5×moveTo+2×lineTo+3×arc+stroke+fill').toBe(15)
+    expect(first, '一幀＝clearRect+2×beginPath+4×moveTo+2×lineTo+2×arc+stroke+fill').toBe(13)
 
     app.unmount()
     el.remove()
