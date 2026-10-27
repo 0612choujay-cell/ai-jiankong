@@ -48,3 +48,50 @@ export function playGong(ctx) {
     return false
   }
 }
+
+/**
+ * 魔王的吼叫：低沉的鋸齒波往下滑，疊一段濾過的雜訊當氣音，約 1.1 秒。
+ * @returns {boolean} 有沒有真的送出聲音。
+ */
+export function playRoar(ctx) {
+  if (!ctx) return false
+  try {
+    if (ctx.state === 'suspended') ctx.resume?.()
+    const t0 = ctx.currentTime
+    const dur = 1.1
+    const master = ctx.createGain()
+    master.gain.setValueAtTime(0.0001, t0)
+    master.gain.exponentialRampToValueAtTime(0.9, t0 + 0.06)
+    master.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+    master.connect(ctx.destination)
+
+    const lp = ctx.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.setValueAtTime(1400, t0)
+    lp.frequency.exponentialRampToValueAtTime(300, t0 + dur)
+    lp.connect(master)
+
+    for (const detune of [0, 7]) {
+      const osc = ctx.createOscillator()
+      osc.type = 'sawtooth'
+      osc.frequency.setValueAtTime(130, t0)
+      osc.frequency.exponentialRampToValueAtTime(55, t0 + dur)
+      osc.detune.value = detune
+      osc.connect(lp)
+      osc.start(t0)
+      osc.stop(t0 + dur + 0.05)
+    }
+
+    const frames = Math.floor(ctx.sampleRate * dur)
+    const buf = ctx.createBuffer(1, frames, ctx.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < frames; i++) data[i] = (Math.random() * 2 - 1) * 0.5
+    const noise = ctx.createBufferSource()
+    noise.buffer = buf
+    noise.connect(lp)
+    noise.start(t0)
+    return true
+  } catch {
+    return false
+  }
+}

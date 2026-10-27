@@ -19,3 +19,17 @@ describe('phoneAlert', () => {
     expect(PHONE_ALERT_TEXT.length).toBeLessThanOrEqual(15)
   })
 })
+
+describe('playRoar', () => {
+  it('returns false without a context and true with a working one', async () => {
+    const { playRoar } = await import('./phoneAlert.js')
+    expect(playRoar(null)).toBe(false)
+    const node = () => ({ connect: vi.fn(), start: vi.fn(), stop: vi.fn(), gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, detune: {}, getChannelData: () => new Float32Array(4) })
+    const ctx = {
+      currentTime: 0, sampleRate: 4, state: 'running',
+      createGain: node, createOscillator: node, createBiquadFilter: node,
+      createBuffer: () => node(), createBufferSource: node, destination: {},
+    }
+    expect(playRoar(ctx)).toBe(true)
+  })
+})
