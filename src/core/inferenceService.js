@@ -2,7 +2,7 @@ import { FilesetResolver, PoseLandmarker, FaceLandmarker, HandLandmarker, Object
 import { createScheduler } from './inferenceScheduler.js'
 import { poseMetrics, faceMetrics } from './poseGeometry.js'
 
-const SPECS = [{ key: 'pose', fps: 30 }, { key: 'face', fps: 1 }, { key: 'object', fps: 0.33 }]
+const SPECS = [{ key: 'pose', fps: 30 }, { key: 'face', fps: 4 }, { key: 'object', fps: 0.33 }]
 /**
  * 「不該出現在書桌上的東西」的清單。
  *

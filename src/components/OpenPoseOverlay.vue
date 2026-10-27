@@ -18,7 +18,7 @@
  * 同一套：畫的是未鏡像的影像座標，靠 CSS transform 對齊鏡像預覽。
  */
 import { ref, watch, onBeforeUnmount } from 'vue'
-import { HandLandmarker } from '@mediapipe/tasks-vision'
+import { FaceLandmarker, HandLandmarker } from '@mediapipe/tasks-vision'
 
 const props = defineProps({
   inference: { type: Object, default: null },
@@ -37,6 +37,9 @@ const ARM_LINES = [
   [15, 17], [15, 19], [15, 21], [17, 19],
   [16, 18], [16, 20], [16, 22], [18, 20],
 ]
+
+// 只畫臉的外框（臉部橢圓輪廓），不畫眉毛、眼睛、嘴巴、瞳孔。
+const FACE_LINES = FaceLandmarker.FACE_LANDMARKS_FACE_OVAL
 
 const bodyEl = ref(null)
 const faceEl = ref(null)
@@ -120,6 +123,27 @@ function drawBody(lm) {
   for (let i = 11; i <= 22; i += 1) if (ok(lm[i])) dot(ctx, lm[i], lw * 1.1, ox, oy, sx, sy)
 }
 
+function drawFace(lm) {
+  const layer = layers[1]
+  if (!prepare(layer)) return
+  if (!Array.isArray(lm) || lm.length < 468) return
+  const { width: W, height: H } = layer.el.value
+  const [ox, oy, sx, sy] = mapping(W, H)
+  const ctx = layer.ctx
+  ctx.lineWidth = Math.max(1.5, W * 0.003)
+  ctx.lineCap = 'round'
+  ctx.strokeStyle = 'rgba(255,255,255,.85)'
+  ctx.beginPath()
+  for (let i = 0; i < FACE_LINES.length; i += 1) {
+    const a = lm[FACE_LINES[i].start]
+    const b = lm[FACE_LINES[i].end]
+    if (!a || !b) continue
+    ctx.moveTo(ox + a.x * sx, oy + a.y * sy)
+    ctx.lineTo(ox + b.x * sx, oy + b.y * sy)
+  }
+  ctx.stroke()
+}
+
 function drawHands(hands) {
   const layer = layers[2]
   if (!prepare(layer)) return
@@ -157,7 +181,7 @@ watch(() => props.inference, (inf) => {
   if (!inf) return
   unsubs = [
     typeof inf.onPoseFrame === 'function' ? inf.onPoseFrame(drawBody) : null,
-    // 臉部網格線（使用者要求拿掉）：不再訂閱 onFaceFrame，也不畫臉。
+    typeof inf.onFaceFrame === 'function' ? inf.onFaceFrame(drawFace) : null,
     typeof inf.onHandFrame === 'function' ? inf.onHandFrame(drawHands) : null,
   ]
 }, { immediate: true })
