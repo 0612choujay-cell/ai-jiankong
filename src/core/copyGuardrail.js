@@ -370,6 +370,12 @@ export const LENGTH_RULE_EXCEPTIONS = [
       + '也不是會被下一則訊息在倒數後取代掉的短暫提示。15 字上限的原始理由'
       + '（TTS 念超長句蓋掉下一則提示）在這裡不成立。',
   },
+  {
+    file: 'summary.js',
+    exportName: 'IMPROVE_COPY',
+    reason: '結算頁「怎麼改進」：靜態顯示在畫面上、可從容閱讀，不會被 TTS 朗讀，'
+      + '也不會被下一則訊息取代。禁用詞規則仍然適用。',
+  },
 ]
 
 /**

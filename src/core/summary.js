@@ -1,5 +1,5 @@
 import { fillTemplate } from './copyEngine.js'
-import { SUMMARY_COPY } from '../data/copy/summary.js'
+import { SUMMARY_COPY, IMPROVE_COPY } from '../data/copy/summary.js'
 
 // 這個檔案本身不硬寫任何面向使用者的句子（那些字串連同「為什麼不受 15 字
 // 上限約束」的說明都在 src/data/copy/summary.js——Task 22 的全域文案護欄
@@ -88,4 +88,30 @@ export function buildSummary(record, history = []) {
     headline: parts.join(''),
     nextGoal: line('nextGoal', { targetPct: target }),
   }
+}
+
+/**
+ * 結算頁「怎麼改進」：這一場出現過的每一種狀況，依嚴重程度排序，附上次數、原因和小動作。
+ * @param record 本場紀錄（postureDurationMs／distractionDurationMs）
+ * @param events 本場事件紀錄（[{ reason }]，可為空）
+ * @returns {{ key, label, count, minutes, why, tips }[]} 沒有任何狀況時回空陣列
+ */
+export function buildImprovements(record, events = []) {
+  const posture = record?.postureDurationMs ?? {}
+  const distraction = record?.distractionDurationMs ?? {}
+  const counts = {}
+  for (const e of events ?? []) counts[e.reason] = (counts[e.reason] ?? 0) + 1
+
+  const out = []
+  for (const [key, copy] of Object.entries(IMPROVE_COPY)) {
+    const ms = key === 'phone' ? (distraction.phone ?? 0) : (posture[key] ?? 0)
+    const count = counts[key] ?? 0
+    if (ms <= 0 && count <= 0) continue
+    out.push({
+      key, label: copy.label, why: copy.why, tips: copy.tips,
+      count, minutes: Math.max(1, Math.round(ms / 60_000)), ms,
+    })
+  }
+  // 時間長的、次數多的排前面
+  return out.sort((a, b) => (b.ms - a.ms) || (b.count - a.count))
 }

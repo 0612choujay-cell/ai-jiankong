@@ -114,3 +114,20 @@ describe('buildSummary', () => {
     expect(headline.length).toBeGreaterThan(15)
   })
 })
+
+describe('buildImprovements', () => {
+  it('lists each problem that happened with count, minutes, why and tips', async () => {
+    const { buildImprovements } = await import('./summary.js')
+    const out = buildImprovements(
+      { postureDurationMs: { slouch: 120_000, headTilt: 30_000 }, distractionDurationMs: { phone: 60_000 } },
+      [{ reason: 'slouch' }, { reason: 'slouch' }, { reason: 'phone' }],
+    )
+    expect(out.map((x) => x.key)).toEqual(['slouch', 'phone', 'headTilt'])
+    expect(out[0]).toMatchObject({ count: 2, minutes: 2 })
+    expect(out[0].tips.length).toBeGreaterThan(0)
+  })
+  it('returns an empty list when nothing went wrong', async () => {
+    const { buildImprovements } = await import('./summary.js')
+    expect(buildImprovements({ postureDurationMs: { upright: 600_000 } }, [])).toEqual([])
+  })
+})

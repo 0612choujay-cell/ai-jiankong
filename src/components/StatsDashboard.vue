@@ -23,6 +23,18 @@
       <p v-if="historyError" class="hint warn">讀不到以前的紀錄</p>
     </header>
 
+    <section v-if="improvements.length" class="improve">
+      <h3>怎麼改進</h3>
+      <article v-for="it in improvements" :key="it.key">
+        <h4>{{ it.label }}<span v-if="it.count"> · {{ it.count }} 次</span></h4>
+        <p class="why">{{ it.why }}</p>
+        <ul>
+          <li v-for="(t, i) in it.tips" :key="i">{{ t }}</li>
+        </ul>
+      </article>
+    </section>
+    <p v-else class="improve-ok">這次沒有明顯的問題，繼續保持！</p>
+
     <section v-if="events.length" class="event-photos">
       <h3>這次發生的事</h3>
       <ul>
@@ -78,8 +90,8 @@ import {
 } from 'chart.js'
 import { radarAxes } from '../core/radar.js'
 import PhotoLightbox from './PhotoLightbox.vue'
+import { buildSummary, buildImprovements } from '../core/summary.js'
 import { EVENT_REASON_DETAIL, formatElapsed } from '../core/eventLog.js'
-import { buildSummary } from '../core/summary.js'
 import { needsBreakAfter } from '../core/battleConfig.js'
 
 Chart.register(PieController, ArcElement, LineController, LineElement, PointElement,
@@ -116,6 +128,7 @@ const summary = computed(() => (props.record ? buildSummary(props.record, props.
 // Task 20：長時段（≥20 分鐘）打完，下一輪開打前先休息——按鈕文字先講出來，
 // 小孩才不會按下去之後才發現「怎麼跑出一個休息畫面」。判斷本身在
 // battleConfig.js（App.vue 的 onAgain() 讀同一個函式決定真正做什麼）。
+const improvements = computed(() => (props.record ? buildImprovements(props.record, props.events) : []))
 const againLabel = computed(() => (needsBreakAfter(props.record) ? '休息一下再來' : '再討伐一次'))
 const knockedPct = computed(() => {
   const r = props.record
@@ -191,6 +204,12 @@ onBeforeUnmount(() => { for (const c of charts) c.destroy() })
 </script>
 
 <style scoped>
+.improve, .improve-ok { max-width: 36em; margin: 0 auto; }
+.improve article { margin: 12px 0; padding: 12px 16px; background: var(--c-surface); border-radius: 12px; }
+.improve h4 { margin: 0 0 4px; font-size: var(--fs-body); }
+.improve .why { margin: 0 0 6px; color: var(--c-text-dim); }
+.improve ul { margin: 0; padding-left: 1.2em; }
+
 .event-photos ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .event-photos li { width: 220px; font-size: 13px; }
 .photo-btn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }

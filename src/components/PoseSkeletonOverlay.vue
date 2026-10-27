@@ -221,17 +221,22 @@ function draw(rawLandmarks) {
   if (!(W > 0) || !(H > 0)) return
   ctx.clearRect(0, 0, W, H)
 
-  if (!Array.isArray(landmarks) || landmarks.length < 33) return
+  if (!Array.isArray(rawLandmarks) || rawLandmarks.length < 33) return
+  // 有效性一律用「未預測」的原始偵測值判斷，預測只用在畫線位置。
+  const rEarL = rawLandmarks[EAR_L]
+  const rEarR = rawLandmarks[EAR_R]
+  const rShL = rawLandmarks[SHOULDER_L]
+  const rShR = rawLandmarks[SHOULDER_R]
+  if (!rEarL || !rEarR || !rShL || !rShR) return
+  // 判準跟 poseGeometry.poseMetrics() 的 INVALID 條件一致：遊戲說「沒有有效
+  // 姿勢」的那一刻，畫面上的線也要跟著消失，不能兩邊講不一樣的話。
+  if (!visibleEnough(rEarL) || !visibleEnough(rEarR)) return
+  if (!visibleEnough(rShL) || !visibleEnough(rShR)) return
+  if (Math.hypot(rShR.x - rShL.x, rShR.y - rShL.y) < MIN_SHOULDER_WIDTH) return
   const earL = landmarks[EAR_L]
   const earR = landmarks[EAR_R]
   const shL = landmarks[SHOULDER_L]
   const shR = landmarks[SHOULDER_R]
-  if (!earL || !earR || !shL || !shR) return
-  // 判準跟 poseGeometry.poseMetrics() 的 INVALID 條件一致：遊戲說「沒有有效
-  // 姿勢」的那一刻，畫面上的線也要跟著消失，不能兩邊講不一樣的話。
-  if (!visibleEnough(earL) || !visibleEnough(earR)) return
-  if (!visibleEnough(shL) || !visibleEnough(shR)) return
-  if (Math.hypot(shR.x - shL.x, shR.y - shL.y) < MIN_SHOULDER_WIDTH) return
 
   // 正規化座標（0–1，相對於送進模型的那張影像）→ 畫布像素。
   // object-fit 的裁切／留白：cover 取放大倍率的較大者、contain 取較小者，
