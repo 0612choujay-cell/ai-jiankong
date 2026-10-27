@@ -11,6 +11,7 @@
 </template>
 
 <script setup>
+import { createPredictor } from '../core/landmarkPredictor.js'
 /**
  * 骨架線疊加層：把偵測到的姿勢關鍵點連成幾條線，畫在鏡像鏡頭預覽上面。
  *
@@ -176,7 +177,9 @@ function visibleEnough(p) {
  * 傳進 null／無效姿勢時只清空畫布並 return——「偵測不到」必須看得出來，
  * 不能讓上一幀的線留在畫面上假裝還在追蹤。
  */
-function draw(landmarks) {
+function draw(rawLandmarks) {
+  // 動作預測（只影響畫線，不影響判斷）：依速度往前推一小段，抵銷推論延遲。
+  const landmarks = predictor.predict(rawLandmarks, performance.now())
   const el = canvasEl.value
   if (!el) return
   if (ctx === null) {
@@ -285,6 +288,7 @@ function draw(landmarks) {
   ctx.fill()
 }
 
+const predictor = createPredictor()
 let unsubscribe = null
 
 /**

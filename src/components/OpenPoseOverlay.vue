@@ -18,6 +18,7 @@
  * 同一套：畫的是未鏡像的影像座標，靠 CSS transform 對齊鏡像預覽。
  */
 import { ref, watch, onBeforeUnmount } from 'vue'
+import { createPredictor } from '../core/landmarkPredictor.js'
 import { FaceLandmarker, HandLandmarker } from '@mediapipe/tasks-vision'
 
 const props = defineProps({
@@ -40,6 +41,11 @@ const ARM_LINES = [
 
 // 只畫臉的外框（臉部橢圓輪廓），不畫眉毛、眼睛、嘴巴、瞳孔。
 const FACE_LINES = FaceLandmarker.FACE_LANDMARKS_FACE_OVAL
+
+// 動作預測：把座標依速度往前推一小段，抵銷推論延遲（只影響畫線，不影響判斷）。
+const bodyPred = createPredictor()
+const facePred = createPredictor()
+const handPreds = [createPredictor(), createPredictor()]
 
 const bodyEl = ref(null)
 const faceEl = ref(null)
@@ -102,7 +108,8 @@ function dot(ctx, p, r, ox, oy, sx, sy) {
   ctx.fill()
 }
 
-function drawBody(lm) {
+function drawBody(raw) {
+  const lm = bodyPred.predict(raw, performance.now())
   const layer = layers[0]
   if (!prepare(layer)) return
   if (!Array.isArray(lm) || lm.length < 33) return
@@ -123,7 +130,8 @@ function drawBody(lm) {
   for (let i = 11; i <= 22; i += 1) if (ok(lm[i])) dot(ctx, lm[i], lw * 1.1, ox, oy, sx, sy)
 }
 
-function drawFace(lm) {
+function drawFace(raw) {
+  const lm = facePred.predict(raw, performance.now())
   const layer = layers[1]
   if (!prepare(layer)) return
   if (!Array.isArray(lm) || lm.length < 468) return
@@ -155,7 +163,7 @@ function drawHands(hands) {
   ctx.lineWidth = lw
   ctx.lineCap = 'round'
   for (let h = 0; h < hands.length; h += 1) {
-    const lm = hands[h]
+    const lm = handPreds[h % 2].predict(hands[h], performance.now())
     if (!Array.isArray(lm) || lm.length < 21) continue
     for (let i = 0; i < HAND_LINES.length; i += 1) {
       const a = lm[HAND_LINES[i].start]
