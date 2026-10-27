@@ -28,7 +28,7 @@ export function playGong(ctx) {
     if (ctx.state === 'suspended') ctx.resume?.()
     const t0 = ctx.currentTime
     const master = ctx.createGain()
-    master.gain.value = 0.35
+    master.gain.value = 0.75 // 最大音量：各泛音增益加總約 1.27，0.75 讓峰值約 0.95、不爆音
     master.connect(ctx.destination)
     for (const p of PARTIALS) {
       const osc = ctx.createOscillator()

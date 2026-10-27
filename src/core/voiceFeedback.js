@@ -91,6 +91,7 @@ export function createVoiceFeedback() {
       u.voice = voice
       u.lang = voice?.lang ?? 'zh-TW'
       u.rate = 1
+      u.volume = 1 // 語音音量固定最大
       // 讓「目前在念的優先權」回到 -1（等於沒有東西在念），下一句任何優先權
       // 都能正常開口，不會被上一句念完後遺留的 currentPriority 卡住。
       u.onend = () => { currentPriority = -1 }
