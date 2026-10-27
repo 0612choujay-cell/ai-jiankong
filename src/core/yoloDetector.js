@@ -69,7 +69,7 @@ export async function createYoloDetector({
 } = {}) {
   ort.env.wasm.wasmPaths = wasmPath
   ort.env.wasm.numThreads = 1 // 多執行緒需要 COOP/COEP，Pages 上沒開
-  ort.env.wasm.proxy = false
+  ort.env.wasm.proxy = true // 推論放到 worker：YOLO 在主執行緒跑一次要數百毫秒，會卡住骨架線
   const session = injected ?? await ort.InferenceSession.create(modelUrl, { executionProviders: ['wasm'] })
   const canvas = typeof OffscreenCanvas !== 'undefined'
     ? new OffscreenCanvas(SIZE, SIZE)
