@@ -100,9 +100,10 @@ export function playRoar(ctx) {
 /**
  * 直接用瀏覽器語音念一句（取代原本的吼叫聲），不經過 🔊／🔇 開關。
  * 需要之前已有使用者手勢解鎖過語音（開戰按鈕那次 primeVoiceFromGesture）。
+ * onStart／onEnd：聲音真正開始、結束時呼叫（畫面動作要跟著聲音走）。
  * @returns {boolean} 有沒有送出。
  */
-export function speakNow(text, lang = PHONE_ALERT_LANG) {
+export function speakNow(text, lang = PHONE_ALERT_LANG, { onStart, onEnd } = {}) {
   try {
     const synth = window.speechSynthesis
     if (!synth || !text) return false
@@ -114,6 +115,10 @@ export function speakNow(text, lang = PHONE_ALERT_LANG) {
     u.lang = v?.lang ?? lang
     u.volume = 1
     u.rate = 1
+    // 聲音真正開始／結束的時間點，讓畫面動作跟聲音同步。
+    u.onstart = () => onStart?.()
+    u.onend = () => onEnd?.()
+    u.onerror = () => onEnd?.()
     synth.speak(u)
     return true
   } catch {

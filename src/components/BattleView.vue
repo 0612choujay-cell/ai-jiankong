@@ -699,20 +699,42 @@ let gongCtx = null
 let phoneAlertTimer = 0
 const roaring = ref(false)
 let roarTimer = 0
+let roarFallback = 0
+// 魔王的動作（震動＋大字）跟聲音同一刻開始：等語音真的 onstart 才演，
+// 語音一結束（至少演 ROAR_MIN_MS）就收。語音送不出去或太久沒開始，就用備援計時直接演。
+const ROAR_MIN_MS = 1200
+const ROAR_FALLBACK_MS = 700
+function startRoar() {
+  clearTimeout(roarFallback)
+  roaring.value = true
+  roarStartedAt = performance.now()
+}
+let roarStartedAt = 0
+function endRoar() {
+  clearTimeout(roarTimer)
+  const wait = Math.max(0, ROAR_MIN_MS - (performance.now() - roarStartedAt))
+  roarTimer = setTimeout(() => { roaring.value = false }, wait)
+}
 function phoneAlertOnce() {
   if (!s.phoneVisible) return
-  // 魔王大喊＋畫面震動：不受 🔊／🔇 開關影響。
-  roaring.value = true
+  roaring.value = false
   clearTimeout(roarTimer)
-  roarTimer = setTimeout(() => { roaring.value = false }, 1200)
+  clearTimeout(roarFallback)
   try {
     gongCtx = gongCtx || new (window.AudioContext || window.webkitAudioContext)()
   } catch { gongCtx = null }
-  // 吼叫改成魔王大喊「不要再滑了」：直接念，不受 🔊／🔇 開關影響。
-  speakNow(PHONE_ALERT_TEXT, PHONE_ALERT_LANG)
+  // 魔王大喊「不要再滑了」：直接念，不受 🔊／🔇 開關影響。
+  const sent = speakNow(PHONE_ALERT_TEXT, PHONE_ALERT_LANG, { onStart: startRoar, onEnd: endRoar })
+  if (!sent) {
+    startRoar()
+    endRoar()
+  } else {
+    roarFallback = setTimeout(() => { startRoar(); endRoar() }, ROAR_FALLBACK_MS)
+  }
   if (s.voiceEnabled) playGong(gongCtx)
 }
 function stopPhoneAlert() {
+  clearTimeout(roarFallback)
   clearTimeout(roarTimer)
   roaring.value = false
   clearInterval(phoneAlertTimer)
