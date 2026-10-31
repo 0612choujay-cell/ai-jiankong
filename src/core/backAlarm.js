@@ -9,7 +9,7 @@ import { speakNow } from './phoneAlert.js'
  * 所以這是「盡力而為」：能響就響，被系統擋掉就沒有聲音。
  */
 export const BACK_ALARM_REPEAT_MS = 3500
-export const BACK_ALARM_TEXT = '回去。回去。'
+export const BACK_ALARM_TEXT = '回去回去'
 
 export function playBeeps(ctx, count = 3) {
   if (!ctx) return false
