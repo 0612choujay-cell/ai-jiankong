@@ -1,4 +1,4 @@
-import { loadAlarmBuffer } from './backAlarm.js'
+import { DISTRACTED_CLIP_RATE, DISTRACTED_CLIP_PCM16_B64 } from '../data/distractedClip.js'
 
 /**
  * 全 App 共用一個 AudioContext，並且在「開始」那一下點擊（使用者手勢）裡解鎖。
@@ -7,7 +7,26 @@ import { loadAlarmBuffer } from './backAlarm.js'
  */
 let ctx = null
 let alarmBuffer = null
-let loading = null
+
+/** 把內嵌的 PCM16 直接建成 AudioBuffer（同步，沒有任何會失敗的載入／解碼）。 */
+export function buildClipBuffer(c) {
+  try {
+    const bin = window.atob(DISTRACTED_CLIP_PCM16_B64)
+    const n = bin.length >> 1
+    const buf = c.createBuffer(1, n, DISTRACTED_CLIP_RATE)
+    const ch = new Float32Array(n)
+    for (let i = 0; i < n; i++) {
+      let v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8)
+      if (v & 0x8000) v -= 0x10000
+      ch[i] = v / 32768
+    }
+    if (buf.copyToChannel) buf.copyToChannel(ch, 0)
+    else buf.getChannelData(0).set(ch)
+    return buf
+  } catch {
+    return null
+  }
+}
 
 export function getSharedCtx() {
   if (!ctx) {
@@ -33,11 +52,11 @@ export function unlockAudioFromGesture() {
     src.connect(c.destination)
     src.start(0)
   } catch { /* 解鎖失敗不影響遊戲 */ }
-  if (!loading) loading = loadAlarmBuffer(c).then((b) => { alarmBuffer = b; return b })
+  alarmBuffer ??= buildClipBuffer(c)
   return true
 }
 
 export function getAlarmBuffer() {
-  if (!alarmBuffer && !loading && ctx) loading = loadAlarmBuffer(ctx).then((b) => { alarmBuffer = b; loading = alarmBuffer ? loading : null; return b })
+  if (!alarmBuffer && ctx) alarmBuffer = buildClipBuffer(ctx)
   return alarmBuffer
 }
