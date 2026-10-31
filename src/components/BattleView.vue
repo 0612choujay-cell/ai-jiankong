@@ -245,7 +245,7 @@ import { createPostureCoach } from '../core/postureCoach.js'
 import { EVENT_REASON_LABEL } from '../core/eventLog.js'
 import { copyKeyForEvent } from '../core/bossDialogue.js'
 import { BATTLE, BREAK_AFTER_MS } from '../core/battleConfig.js'
-import { listenForYesNo } from '../core/voiceCommand.js'
+import { listenContinuously } from '../core/voiceCommand.js'
 import { createBackAlarm } from '../core/backAlarm.js'
 import { getSharedCtx, getAlarmBuffer } from '../core/sharedAudio.js'
 import { playGong, speakNow, PHONE_ALERT_TEXT, PHONE_ALERT_LANG, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
@@ -766,13 +766,13 @@ function onVisibility() {
 // 觸發：偵測到想睡，或戰鬥滿 BREAK_AFTER_MS；問過之後 REST_COOLDOWN_MS 內不再問。
 const REST_PROMPT = '要休息嗎？'
 const REST_COOLDOWN_MS = 10 * 60_000
-const REST_VOICE_ANSWER = false // 改成 true 就恢復「說好／不要」的麥克風辨識
 const REST_WAIT_MS = 15_000
 const REST_SPEECH_FALLBACK_MS = 5000
 const restBanner = ref(null) // null | 'asking' | 'listening'
 const restFail = ref(null)
 let lastRestAskAt = -Infinity
 let restListener = null
+let micListener = null
 let restFallback = 0
 let restAskedAtLimit = false
 const REST_FAIL_TEXT = {
@@ -798,17 +798,10 @@ function onRestAnswer(answer, reason) {
 function startRestListening() {
   clearTimeout(restFallback)
   if (restBanner.value !== 'asking') return
-  // 麥克風辨識目前關閉：在 iPad 上一開麥克風，前鏡頭的畫面就會凍住（實測）。
-  // 改成只等螢幕上的「好」「不要」按鈕，REST_WAIT_MS 沒按就當作不休息。
-  if (!REST_VOICE_ANSWER) {
-    restFallback = setTimeout(() => onRestAnswer(null, 'stopped'), REST_WAIT_MS)
-    return
-  }
+  // 麥克風從戰鬥一開始就開著（見 onMounted），這裡只是「開始接受回答」。
+  // 問題念完後再等 0.5 秒才收，避免把問題語音的尾音當成回答。
   restBanner.value = 'listening'
-  // 語音念完後等一下再開麥克風：iOS 要從「播放」切回「錄音」，馬上開常常一開就被結束。
-  restFallback = setTimeout(() => {
-    if (restBanner.value === 'listening') restListener = listenForYesNo(onRestAnswer)
-  }, 500)
+  restFallback = setTimeout(() => onRestAnswer(null, 'stopped'), REST_WAIT_MS)
 }
 function askRest() {
   const now = performance.now()
@@ -913,6 +906,10 @@ function pollHud() {
 }
 
 onMounted(() => {
+  // 開始戰鬥就開麥克風（使用者要求）：只在「要休息嗎？」等你回答的時候才採用聽到的「好／不要」。
+  micListener = listenContinuously((answer) => {
+    if (restBanner.value === 'listening') onRestAnswer(answer)
+  }, { onError: (code) => { restFail.value = REST_FAIL_TEXT[code] ?? '麥克風無法使用'; setTimeout(() => { restFail.value = null }, 4000) } })
   document.addEventListener('visibilitychange', onVisibility)
   getAlarmBuffer() // 確保「分心了」音檔已在載入
   attachPreview()
@@ -926,6 +923,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  micListener?.stop()
+  micListener = null
   stopRest()
   document.removeEventListener('visibilitychange', onVisibility)
   backAlarm.stop()

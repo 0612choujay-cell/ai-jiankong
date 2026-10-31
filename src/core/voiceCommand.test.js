@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { classifyAnswer, listenForYesNo } from './voiceCommand.js'
+import { classifyAnswer, listenForYesNo, listenContinuously } from './voiceCommand.js'
 
 describe('classifyAnswer', () => {
   it('maps yes-like and no-like answers', () => {
@@ -85,6 +85,46 @@ describe('listenForYesNo', () => {
     vi.advanceTimersByTime(1000)
     expect(cb).toHaveBeenCalledWith(null, 'timeout')
     vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('listenContinuously', () => {
+  it('reports every final yes/no answer, ignores interim and unrelated speech, restarts on end, stops on stop()', () => {
+    vi.useFakeTimers()
+    const made = []
+    class Fake { constructor() { made.push(this) } start() {} abort() {} }
+    vi.stubGlobal('window', { SpeechRecognition: Fake })
+    const cb = vi.fn()
+    const h = listenContinuously(cb)
+    const fin = (t) => { const r = [{ transcript: t }]; r.isFinal = true; return { resultIndex: 0, results: [r] } }
+    made[0].onresult(fin('今天天氣'))
+    expect(cb).not.toHaveBeenCalled()
+    made[0].onresult(fin('好'))
+    made[0].onresult(fin('不要'))
+    expect(cb.mock.calls.map((c) => c[0])).toEqual(['yes', 'no'])
+    made[0].onend()
+    vi.advanceTimersByTime(400)
+    expect(made).toHaveLength(2)
+    h.stop()
+    made[1].onend()
+    vi.advanceTimersByTime(1000)
+    expect(made).toHaveLength(2)
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+  it('gives up with an error on a fatal error or when unsupported', () => {
+    class Fake { constructor() { this.s = this } start() {} abort() {} }
+    let rec
+    vi.stubGlobal('window', { SpeechRecognition: class extends Fake { constructor() { super(); rec = this } } })
+    const onError = vi.fn()
+    listenContinuously(vi.fn(), { onError })
+    rec.onerror({ error: 'not-allowed' })
+    expect(onError).toHaveBeenCalledWith('not-allowed')
+    vi.stubGlobal('window', {})
+    const e2 = vi.fn()
+    expect(listenContinuously(vi.fn(), { onError: e2 }).supported).toBe(false)
+    expect(e2).toHaveBeenCalledWith('unsupported')
     vi.unstubAllGlobals()
   })
 })

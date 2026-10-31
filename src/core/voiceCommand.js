@@ -94,3 +94,65 @@ export function listenForYesNo(onResult, { lang = 'zh-TW', timeoutMs = LISTEN_MS
   timer = setTimeout(() => finish(null), timeoutMs)
   return { stop() { finish(null, 'stopped') } }
 }
+
+/**
+ * 整場戰鬥一直開著麥克風聽（使用者要求「開始就開麥克風」）：每次辨識到「好／不要」
+ * 就呼叫 onAnswer('yes'|'no')；辨識自己結束就自動重開，直到 stop()。
+ * 隱私影響比「只在問休息時才開」大得多：整場的聲音都會送去辨識。這是使用者明確要求的。
+ * @returns {{ stop(): void, supported: boolean }}
+ */
+export function listenContinuously(onAnswer, { lang = 'zh-TW', onError } = {}) {
+  const Ctor = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null
+  if (!Ctor) { onError?.('unsupported'); return { stop() {}, supported: false } }
+  const FATAL = new Set(['not-allowed', 'service-not-allowed', 'audio-capture', 'language-not-supported'])
+  let stopped = false
+  let rec = null
+  let restartTimer = 0
+  let quickEnds = 0
+
+  function begin() {
+    if (stopped) return
+    const startedAt = Date.now()
+    try {
+      rec = new Ctor()
+      rec.lang = lang
+      rec.continuous = true
+      rec.interimResults = false
+      rec.maxAlternatives = 3
+      rec.onresult = (ev) => {
+        for (let i = ev.resultIndex ?? 0; i < ev.results.length; i++) {
+          if (ev.results[i].isFinal === false) continue
+          for (let j = 0; j < ev.results[i].length; j++) {
+            const answer = classifyAnswer(ev.results[i][j].transcript)
+            if (answer) { onAnswer(answer); break }
+          }
+        }
+      }
+      rec.onerror = (ev) => {
+        const code = ev?.error ?? 'error'
+        if (FATAL.has(code)) { stopped = true; onError?.(code) }
+      }
+      rec.onend = () => {
+        if (stopped) return
+        // 一開就結束太多次（被系統擋、衝突）就放棄，不要無限空轉。
+        quickEnds = Date.now() - startedAt < 1000 ? quickEnds + 1 : 0
+        if (quickEnds >= 5) { stopped = true; onError?.('unstable'); return }
+        restartTimer = setTimeout(begin, 300)
+      }
+      rec.start()
+    } catch (e) {
+      stopped = true
+      onError?.(e?.name ?? 'start-failed')
+    }
+  }
+  begin()
+  return {
+    supported: true,
+    stop() {
+      stopped = true
+      clearTimeout(restartTimer)
+      try { rec?.abort?.() } catch { /* 已經停了 */ }
+      rec = null
+    },
+  }
+}
