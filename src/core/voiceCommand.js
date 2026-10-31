@@ -63,6 +63,8 @@ export function listenForYesNo(onResult, { lang = 'zh-TW', timeoutMs = LISTEN_MS
       rec.maxAlternatives = 3
       rec.onresult = (ev) => {
         for (let i = ev.resultIndex ?? 0; i < ev.results.length; i++) {
+          // 只收「定案」的結果：暫時結果常是雜音或提問語音的尾巴，會被誤判成回答。
+          if (ev.results[i].isFinal === false) continue
           for (let j = 0; j < ev.results[i].length; j++) {
             const answer = classifyAnswer(ev.results[i][j].transcript)
             if (answer) { finish(answer); return }

@@ -103,7 +103,11 @@
            / bossUltimate，後者由 ultimates 陣列推導 / bossAttacking）加上
            battle.phase。上面 .arena__boss 的 class 與這裡的 prop 綁的是
            同一組，不是第二套狀態機。BossSprite 自己不讀 store、不計時。 -->
-      <p v-if="restBanner" class="idle-banner" aria-live="polite">{{ restBanner === 'listening' ? '🎤 請說：好／不要' : REST_PROMPT }}</p>
+      <div v-if="restBanner" class="idle-banner rest-ask" aria-live="polite">
+        <p>{{ restBanner === 'listening' ? '🎤 請說：好／不要' : REST_PROMPT }}</p>
+        <button type="button" @click="onRestAnswer('yes')">好</button>
+        <button type="button" @click="onRestAnswer('no')">不要</button>
+      </div>
       <p v-if="restFail" class="idle-banner" aria-live="polite">{{ restFail }}</p>
       <p v-if="idleBanner" class="idle-banner" aria-live="polite">{{ IDLE_TEXT }}</p>
       <p v-if="roaring" class="roar-text" aria-hidden="true">{{ PHONE_ALERT_TEXT }}！</p>
@@ -760,7 +764,7 @@ function onVisibility() {
 }
 // 叫你休息：念一句、顯示提示，念完開麥克風聽「好／ok」→ 進休息倒數、「不要／no」→ 不休息。
 // 觸發：偵測到想睡，或戰鬥滿 BREAK_AFTER_MS；問過之後 REST_COOLDOWN_MS 內不再問。
-const REST_PROMPT = '要休息嗎？說好或不要'
+const REST_PROMPT = '要休息嗎？'
 const REST_COOLDOWN_MS = 10 * 60_000
 const REST_SPEECH_FALLBACK_MS = 5000
 const restBanner = ref(null) // null | 'asking' | 'listening'
@@ -778,12 +782,14 @@ const REST_FAIL_TEXT = {
   network: '語音辨識需要網路',
 }
 function onRestAnswer(answer, reason) {
+  clearTimeout(restFallback)
+  restListener?.stop()
   restListener = null
   restBanner.value = null
   if (answer === 'yes') { session.enterBreak(); return }
   // 沒有結果時把原因顯示 3 秒（只有原因代碼對應的固定句子，不含任何聲音內容）。
   if (!answer && reason !== 'stopped') {
-    restFail.value = REST_FAIL_TEXT[reason] ?? '沒聽清楚，不休息'
+    restFail.value = REST_FAIL_TEXT[reason] ?? '沒聽到回答'
     setTimeout(() => { restFail.value = null }, 3000)
   }
 }
@@ -1253,6 +1259,9 @@ onBeforeUnmount(() => {
 .score { font-size: var(--fs-body); color: var(--c-text-dim); }
 .task-label { font-size: var(--fs-body); color: var(--c-text); }
 .event-log { position: absolute; left: var(--gap); top: 30%; z-index: 4; }
+.rest-ask { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
+.rest-ask p { margin: 0; }
+.rest-ask button { min-height: var(--tap-min); padding: 0 20px; font-size: 24px; }
 .idle-banner {
   position: absolute; left: 50%; top: 12%; transform: translateX(-50%); z-index: 5; margin: 0;
   padding: 8px 20px; border-radius: 12px; font-size: 40px; font-weight: 800; color: #fff;

@@ -22,6 +22,18 @@ describe('listenForYesNo', () => {
     expect(cb).toHaveBeenCalledWith(null, 'unsupported')
     vi.unstubAllGlobals()
   })
+  it('ignores interim (non-final) results', () => {
+    let rec
+    class Fake { constructor() { rec = this } start() {} abort() {} }
+    vi.stubGlobal('window', { SpeechRecognition: Fake })
+    const cb = vi.fn()
+    listenForYesNo(cb)
+    const r = [{ transcript: '不' }]
+    r.isFinal = false
+    rec.onresult({ resultIndex: 0, results: [r] })
+    expect(cb).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
   it('reports the first recognised answer once and ignores later events', () => {
     let rec
     class Fake {
