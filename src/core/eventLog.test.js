@@ -56,3 +56,11 @@ describe('event descriptions', () => {
     expect(m.formatElapsed(null)).toBe('0:00')
   })
 })
+
+describe('leftPage event', () => {
+  it('records a one-off event with time and reason', () => {
+    const log = createEventLog()
+    log.add('leftPage', 5000, W)
+    expect(log.entries()).toEqual([{ at: expect.stringMatching(/^\d\d:\d\d:\d\d$/), tMs: 5000, reason: 'leftPage' }])
+  })
+})

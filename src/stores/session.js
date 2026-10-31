@@ -830,6 +830,11 @@ function onHidden() {
   // 以下才是 I3/I4 真正要保護的東西：暫停中離開不該被算成一次「離開」
   // （吃 away 陷阱、扣分、魔王回血），也不該去動已經放掉的 WakeLock。
   if (state.paused) return
+  // 離開頁面：記一筆（時間＋原因），結算頁會列出次數並給改進建議。
+  if (fsm && !state.battle?.ended) {
+    eventLog.add('leftPage', sessionT(now))
+    state.eventLog = eventLog.entries()
+  }
   freshnessSuspendedAt = now
   wakeLock.release()
   window.speechSynthesis?.cancel?.()

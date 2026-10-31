@@ -18,6 +18,7 @@ export const EVENT_REASON_LABEL = {
   gazeAway: '視線離開',
   drowsy: '疑似睡著／躺下',
   phone: '看到手機',
+  leftPage: '離開頁面',
 }
 
 /** 結算頁照片下方的說明：這張照片拍到了什麼 */
@@ -29,6 +30,7 @@ export const EVENT_REASON_DETAIL = {
   gazeAway: '視線離開：眼睛沒有看前方',
   drowsy: '疑似睡著或躺下',
   phone: '看到手機',
+  leftPage: '離開頁面：切到別的網頁或 App',
 }
 
 /** 場次內毫秒 → m:ss */
@@ -62,6 +64,11 @@ export function createEventLog({ max = EVENT_LOG_MAX } = {}) {
       if (entries.length > max) entries = entries.slice(entries.length - max)
       prev = now
       return added
+    },
+    /** 不是「姿勢／物品出現」型的單次事件（例如離開頁面），直接記一筆 */
+    add(reason, tMs, wallMs = Date.now()) {
+      entries.push({ at: clock(new Date(wallMs)), tMs, reason })
+      if (entries.length > max) entries = entries.slice(entries.length - max)
     },
     entries() { return entries.slice() },
     /** 幫最近新增的 n 筆掛上照片（記憶體內的縮圖 data URL，只留最後 PHOTO_MAX 張） */

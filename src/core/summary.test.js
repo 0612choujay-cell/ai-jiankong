@@ -131,3 +131,13 @@ describe('buildImprovements', () => {
     expect(buildImprovements({ postureDurationMs: { upright: 600_000 } }, [])).toEqual([])
   })
 })
+
+describe('buildImprovements: leftPage', () => {
+  it('shows leaving the page with its count even without posture time', async () => {
+    const { buildImprovements } = await import('./summary.js')
+    const out = buildImprovements({ postureDurationMs: {} }, [{ reason: 'leftPage' }, { reason: 'leftPage' }])
+    expect(out).toHaveLength(1)
+    expect(out[0]).toMatchObject({ key: 'leftPage', count: 2 })
+    expect(out[0].tips.length).toBeGreaterThan(0)
+  })
+})
