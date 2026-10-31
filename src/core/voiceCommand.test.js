@@ -48,6 +48,22 @@ describe('listenForYesNo', () => {
     expect(cb).toHaveBeenCalledWith(null, 'not-allowed')
     vi.unstubAllGlobals()
   })
+  it('restarts when the browser ends early with no result, until the deadline', () => {
+    vi.useFakeTimers()
+    const made = []
+    class Fake { constructor() { made.push(this) } start() {} abort() {} }
+    vi.stubGlobal('window', { SpeechRecognition: Fake })
+    const cb = vi.fn()
+    listenForYesNo(cb, { timeoutMs: 5000 })
+    made[0].onend() // iOS 很快就自己結束
+    vi.advanceTimersByTime(200)
+    expect(made).toHaveLength(2)
+    expect(cb).not.toHaveBeenCalled()
+    made[1].onresult({ resultIndex: 0, results: [[{ transcript: 'ok' }]] })
+    expect(cb).toHaveBeenCalledWith('yes', null)
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
   it('times out with null', () => {
     vi.useFakeTimers()
     class Fake { start() {} abort() {} }

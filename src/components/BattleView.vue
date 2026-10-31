@@ -791,7 +791,10 @@ function startRestListening() {
   clearTimeout(restFallback)
   if (restBanner.value !== 'asking') return
   restBanner.value = 'listening'
-  restListener = listenForYesNo(onRestAnswer)
+  // 語音念完後等一下再開麥克風：iOS 要從「播放」切回「錄音」，馬上開常常一開就被結束。
+  restFallback = setTimeout(() => {
+    if (restBanner.value === 'listening') restListener = listenForYesNo(onRestAnswer)
+  }, 500)
 }
 function askRest() {
   const now = performance.now()
