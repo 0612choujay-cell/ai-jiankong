@@ -805,9 +805,6 @@ async function onVisible() {
 
 function onHidden() {
   const now = performance.now()
-  // 離開頁面的照片：趁鏡頭還沒被關掉、影片還留著最後一幀時先拍（只拍得到使用者，
-  // 瀏覽器不允許擷取別的網頁的畫面）。
-  const leavePhoto = fsm && !state.paused && !state.battle?.ended ? snapshotPhoto() : null
   // 崩潰保險（task-17）：跟 handlePageHide() 同一個理由，排在這個函式最前面、
   // 不受下面 paused／世代任何條件影響——`visibilitychange` 之後 iOS 隨時可能
   // 進一步把頁面凍結，這是本函式唯一「不做就會遺失資料」的一步。包進 try：
@@ -836,7 +833,6 @@ function onHidden() {
   // 離開頁面：記一筆（時間＋原因），結算頁會列出次數並給改進建議。
   if (fsm && !state.battle?.ended) {
     eventLog.add('leftPage', sessionT(now))
-    eventLog.attachPhoto(1, leavePhoto)
     state.eventLog = eventLog.entries()
   }
   freshnessSuspendedAt = now
