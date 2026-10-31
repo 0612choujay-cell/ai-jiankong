@@ -1,7 +1,7 @@
 import { speakNow } from './phoneAlert.js'
 
 /**
- * 離開這個頁面（切到別的網頁／App）時的警報：嗶嗶嗶，再念兩次 "Go back"，
+ * 離開這個頁面（切到別的網頁／App）時的警報：嗶嗶嗶，再念兩次「回去」，
  * 回到頁面才停。
  *
  * 限制（瀏覽器行為，程式無法繞過）：iPad Safari 會在頁面進背景後暫停計時器、
@@ -9,7 +9,7 @@ import { speakNow } from './phoneAlert.js'
  * 所以這是「盡力而為」：能響就響，被系統擋掉就沒有聲音。
  */
 export const BACK_ALARM_REPEAT_MS = 3500
-export const BACK_ALARM_TEXT = 'Go back. Go back.'
+export const BACK_ALARM_TEXT = '回去。回去。'
 
 export function playBeeps(ctx, count = 3) {
   if (!ctx) return false
@@ -40,7 +40,7 @@ export function createBackAlarm({ getCtx }) {
   let timer = 0
   function once() {
     playBeeps(getCtx())
-    setTimeout(() => speakNow(BACK_ALARM_TEXT, 'en-US'), 900)
+    setTimeout(() => speakNow(BACK_ALARM_TEXT, 'zh-TW'), 900)
   }
   return {
     start() {
