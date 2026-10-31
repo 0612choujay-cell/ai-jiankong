@@ -1,7 +1,7 @@
 import { speakNow } from './phoneAlert.js'
 
 /**
- * 離開這個頁面（切到別的網頁／App）時的警報：嗶嗶嗶，再念兩次「回去」，
+ * 離開這個頁面（切到別的網頁／App）時的警報：嗶兩聲，1 秒後念「分心了」，
  * 回到頁面才停。
  *
  * 限制（瀏覽器行為，程式無法繞過）：iPad Safari 會在頁面進背景後暫停計時器、
@@ -9,9 +9,9 @@ import { speakNow } from './phoneAlert.js'
  * 所以這是「盡力而為」：能響就響，被系統擋掉就沒有聲音。
  */
 export const BACK_ALARM_REPEAT_MS = 3500
-export const BACK_ALARM_TEXT = '回去回去'
+export const BACK_ALARM_TEXT = '分心了'
 
-export function playBeeps(ctx, count = 3) {
+export function playBeeps(ctx, count = 2) {
   if (!ctx) return false
   try {
     if (ctx.state === 'suspended') ctx.resume?.()
@@ -40,7 +40,8 @@ export function createBackAlarm({ getCtx }) {
   let timer = 0
   function once() {
     playBeeps(getCtx())
-    setTimeout(() => speakNow(BACK_ALARM_TEXT, 'zh-TW'), 900)
+    // 離開 1 秒後念「分心了」
+    setTimeout(() => speakNow(BACK_ALARM_TEXT, 'zh-TW'), 1000)
   }
   return {
     start() {

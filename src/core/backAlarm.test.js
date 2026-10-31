@@ -7,10 +7,10 @@ const fakeCtx = () => {
 }
 
 describe('backAlarm', () => {
-  it('plays three beeps', () => {
+  it('plays two beeps by default', () => {
     const ctx = fakeCtx()
     expect(playBeeps(ctx)).toBe(true)
-    expect(ctx.createOscillator).toHaveBeenCalledTimes(3)
+    expect(ctx.createOscillator).toHaveBeenCalledTimes(2)
     expect(playBeeps(null)).toBe(false)
   })
   it('starts once, repeats, and stops cleanly', () => {
@@ -19,13 +19,13 @@ describe('backAlarm', () => {
     const alarm = createBackAlarm({ getCtx: () => ctx })
     alarm.start()
     alarm.start() // 重複呼叫不會疊加
-    expect(ctx.createOscillator).toHaveBeenCalledTimes(3)
+    expect(ctx.createOscillator).toHaveBeenCalledTimes(2)
     vi.advanceTimersByTime(3500)
-    expect(ctx.createOscillator).toHaveBeenCalledTimes(6)
+    expect(ctx.createOscillator).toHaveBeenCalledTimes(4)
     alarm.stop()
     expect(alarm.isRunning()).toBe(false)
     vi.advanceTimersByTime(10000)
-    expect(ctx.createOscillator).toHaveBeenCalledTimes(6)
+    expect(ctx.createOscillator).toHaveBeenCalledTimes(4)
     vi.useRealTimers()
   })
 })
