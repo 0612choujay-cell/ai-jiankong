@@ -107,6 +107,8 @@ const state = reactive({
   posture: 'upright',
   drowsy: false,
   phoneVisible: false,
+  // 沒在做事（手不動、沒拿書／杯子／水瓶）持續 IDLE_HOLD_MS 以上。純布林。
+  idle: false,
   // 事件紀錄（時間＋原因，純文字標籤；見 core/eventLog.js）。
   eventLog: [],
   // 單向緊急降檔（perfMonitor.js）的觀測面：latencyEma 是純數字（推論延遲的
@@ -599,6 +601,28 @@ function syncInferenceScale() {
 const AUTO_CAL_MS = 8000
 let autoBaseline = null // { collector, baseline, startedAt } | null
 
+// 「沒在做事」判斷（使用者要求）：手沒在動、沒拿書／杯子／水瓶，連續 IDLE_HOLD_MS 才算。
+// 數字是估計值，沒有真機量測：IDLE_MOTION＝手腕每秒移動的肩寬數，寫字約 0.3 以上。
+const IDLE_HOLD_MS = 10_000
+const IDLE_MOTION = 0.15
+const STUDY_ITEM_TTL_MS = 6000 // 物件偵測約 3 秒一次，看到書／杯子之後這麼久內都算「有在用」
+let handMotion = null
+let handMotionAt = 0
+let studyItemUntil = 0
+let idleSince = null
+
+function updateIdle(now) {
+  const motionKnown = handMotion !== null && now - handMotionAt < 1500
+  const idleNow = !state.paused && !autoBaseline && motionKnown
+    && now - lastValidPoseAt < 2000
+    && handMotion < IDLE_MOTION
+    && now > studyItemUntil
+    && !state.phoneVisible && !state.drowsy
+  if (!idleNow) { idleSince = null; state.idle = false; return }
+  idleSince ??= now
+  state.idle = now - idleSince >= IDLE_HOLD_MS
+}
+
 async function frame(gen) {
   try {
     const now = performance.now()
@@ -628,13 +652,17 @@ async function frame(gen) {
           }
         }
         if (r.metrics?.valid) lastValidPoseAt = now
+        handMotion = r.metrics?.handMotion ?? null
+        handMotionAt = now
       } else if (r.key === 'face') {
         analyzer.pushFace({ t: now, metrics: r.metrics })
         if (r.metrics?.valid) lastValidFaceAt = now
       } else {
         state.phoneVisible = Boolean(r.metrics.phoneVisible)
+        if (r.metrics.studyItem) studyItemUntil = now + STUDY_ITEM_TTL_MS
       }
     }
+    updateIdle(now)
 
     // 暖機（靜默校準）期間畫面還在穩定，桌上原本就有的東西、剛進入畫面的雜訊
     // 都不算分心：不開手機陷阱、不敲鑼。暖機結束後才從「畫面乾淨」重新開始。
@@ -1422,6 +1450,10 @@ const api = {
     copy.resetSession()
     eventLog.reset()
     state.eventLog = []
+    state.idle = false
+    idleSince = null
+    handMotion = null
+    studyItemUntil = 0
     // DebugHud 的「累計輪數」：跟 perf（見上方說明）不同類——這只是一個計數器，
     // 沒有「歸零」的問題，每開一場新戰鬥就該加一，不需要 reset。
     perfSamples.rounds += 1

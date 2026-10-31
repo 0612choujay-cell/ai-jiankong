@@ -407,7 +407,7 @@ describe('Blocking B2：「東西必須夠大」閘門（桌上的東西 vs 房�
       detections: [detection(0.01, 'cell phone')],
     })
     const r = await svc.step(100)
-    expect(r.metrics).toEqual({ phoneVisible: true })
+    expect(r.metrics).toEqual({ phoneVisible: true, studyItem: false })
     expect(JSON.stringify(r)).not.toContain('cell phone')
     expect(JSON.stringify(r)).not.toContain('boundingBox')
   })

@@ -103,6 +103,7 @@
            / bossUltimate，後者由 ultimates 陣列推導 / bossAttacking）加上
            battle.phase。上面 .arena__boss 的 class 與這裡的 prop 綁的是
            同一組，不是第二套狀態機。BossSprite 自己不讀 store、不計時。 -->
+      <p v-if="idleBanner" class="idle-banner" aria-live="polite">{{ IDLE_TEXT }}</p>
       <p v-if="roaring" class="roar-text" aria-hidden="true">{{ PHONE_ALERT_TEXT }}！</p>
       <BossSprite
         :struck="bossStruck"
@@ -733,7 +734,26 @@ function phoneAlertOnce() {
   }
   if (s.voiceEnabled) playGong(gongCtx)
 }
+// 沒在做事（手不動、沒拿書／杯子／水瓶，持續 10 秒）：說「分心了」，還沒動就每 IDLE_REPEAT_MS 再說一次。
+const IDLE_TEXT = '分心了'
+const IDLE_REPEAT_MS = 15_000
+const idleBanner = ref(false)
+let idleTimer = 0
+function idleOnce() {
+  if (!s.idle || s.phoneVisible) return
+  idleBanner.value = true
+  setTimeout(() => { idleBanner.value = false }, 2500)
+  speakNow(IDLE_TEXT, 'zh-TW')
+}
+watch(() => s.idle, (on) => {
+  clearInterval(idleTimer)
+  idleTimer = 0
+  if (!on) { idleBanner.value = false; return }
+  idleOnce()
+  idleTimer = setInterval(idleOnce, IDLE_REPEAT_MS)
+})
 function stopPhoneAlert() {
+  clearInterval(idleTimer)
   clearTimeout(roarFallback)
   clearTimeout(roarTimer)
   roaring.value = false
@@ -1167,6 +1187,11 @@ onBeforeUnmount(() => {
 .score { font-size: var(--fs-body); color: var(--c-text-dim); }
 .task-label { font-size: var(--fs-body); color: var(--c-text); }
 .event-log { position: absolute; left: var(--gap); top: 30%; z-index: 4; }
+.idle-banner {
+  position: absolute; left: 50%; top: 12%; transform: translateX(-50%); z-index: 5; margin: 0;
+  padding: 8px 20px; border-radius: 12px; font-size: 40px; font-weight: 800; color: #fff;
+  background: rgba(0, 0, 0, .65); pointer-events: none;
+}
 .roar-text {
   position: absolute; left: 50%; top: 18%; transform: translateX(-50%); z-index: 5; margin: 0;
   font-size: 56px; font-weight: 900; white-space: nowrap; color: #fff; text-shadow: 0 0 16px var(--c-danger), 0 4px 0 var(--c-danger);

@@ -16,7 +16,7 @@ const MIN_CANDIDATE = 0.25
 const NMS_IOU = 0.5
 
 // COCO 的類別 id → 名稱，只列我們會用到的（其餘不需要名稱）。
-const COCO_NAMES = { 63: 'laptop', 65: 'remote', 67: 'cell phone' }
+const COCO_NAMES = { 39: 'bottle', 41: 'cup', 63: 'laptop', 65: 'remote', 67: 'cell phone', 73: 'book' }
 
 function iou(a, b) {
   const x1 = Math.max(a.x, b.x)

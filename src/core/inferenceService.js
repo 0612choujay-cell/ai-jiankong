@@ -52,6 +52,12 @@ const SPECS = [{ key: 'pose', fps: 30 }, { key: 'face', fps: 3 }, { key: 'object
  * 並且反向鎖住學習用品與上面兩個被裁掉的標籤不得再被加回來。
  * （那條護欄在複審時被指出「宣稱存在但根本不存在」——現在它真的在了。）
  */
+/** 「正在做事」的物品：書、杯子、水瓶。出現在人的範圍內就不算發呆。 */
+const STUDY_LABELS = Object.freeze(['book', 'cup', 'bottle'])
+const STUDY_MIN_SCORE = 0.4
+const WRIST_L = 15
+const WRIST_R = 16
+
 const DISTRACTING_LABELS = Object.freeze([
   'cell phone',
   'remote',
@@ -319,6 +325,9 @@ export function createInferenceService({ videoEl }) {
   // 活在訂閱者那一次呼叫裡，不得存起來），見 notifyPoseFrame 與 onPoseFrame。
   const faceObservers = []
   const handObservers = []
+  // 手腕動作量（每秒移動幾個肩寬，平滑後）：只留上一幀的兩個手腕座標與一個純量。
+  let prevWrists = null
+  let handMotionEma = null
   let poseStepCount = 0
 
   function notifyAll(list, landmarks) {
@@ -421,6 +430,33 @@ export function createInferenceService({ videoEl }) {
    * 這時不判手機：誤判的代價比漏抓高（見下面 isBigEnough 的說明）。
    */
   let personBox = null // { x0, y0, x1, y1, at }（正規化座標）
+
+  function shoulderWidthOf(lm) {
+    const l = lm?.[11]
+    const r = lm?.[12]
+    return l && r ? Math.hypot(l.x - r.x, l.y - r.y) : 0
+  }
+
+  /** 手腕每秒移動幾個肩寬（EMA）；手腕看不到、或隔太久就回 null（＝不知道，不算發呆）。 */
+  function trackHandMotion(lm, shoulderW, now) {
+    const l = lm?.[WRIST_L]
+    const r = lm?.[WRIST_R]
+    const ok = (p) => p && (p.visibility === undefined || p.visibility >= 0.5)
+    if (!(shoulderW > 0.05) || (!ok(l) && !ok(r))) { prevWrists = null; handMotionEma = null; return null }
+    const cur = { t: now, l: ok(l) ? { x: l.x, y: l.y } : null, r: ok(r) ? { x: r.x, y: r.y } : null }
+    const prev = prevWrists
+    prevWrists = cur
+    if (!prev || now - prev.t > 1000 || now - prev.t < 1) return handMotionEma
+    let d = 0
+    let n = 0
+    for (const k of ['l', 'r']) {
+      if (cur[k] && prev[k]) { d += Math.hypot(cur[k].x - prev[k].x, cur[k].y - prev[k].y); n += 1 }
+    }
+    if (!n) return handMotionEma
+    const v = (d / n) / shoulderW / ((now - prev.t) / 1000)
+    handMotionEma = handMotionEma === null ? v : handMotionEma * 0.8 + v * 0.2
+    return handMotionEma
+  }
 
   function updatePersonBox(landmarks, now) {
     if (!Array.isArray(landmarks) || landmarks.length === 0) return
@@ -554,7 +590,7 @@ export function createInferenceService({ videoEl }) {
           const poseResult = tasks.pose.detectForVideo(videoEl, now)
           poseLandmarks = largestPose(poseResult)
           updatePersonBox(poseLandmarks, now)
-          metrics = poseMetrics(poseLandmarks)
+          metrics = { ...poseMetrics(poseLandmarks), handMotion: trackHandMotion(poseLandmarks, shoulderWidthOf(poseLandmarks), now) }
         } else if (key === 'face') {
           const r = tasks.face.detectForVideo(videoEl, now)
           // r.faceLandmarks[0] 是同一次推論算出來的 478 點臉部網格（含虹膜，
@@ -578,7 +614,12 @@ export function createInferenceService({ videoEl }) {
             isBigEnough(d.boundingBox) && inPersonRegion(d.boundingBox, now) && (d.categories ?? []).some(
               (c) => DISTRACTING_LABELS.includes(c.categoryName) && c.score >= PHONE_MIN_SCORE,
             ))
-          metrics = { phoneVisible }
+          // 書／杯子／水瓶在人的範圍內：「正在做事」的訊號，同樣只回傳一個布林值。
+          const studyItem = (r?.detections ?? []).some((d) =>
+            inPersonRegion(d.boundingBox, now) && (d.categories ?? []).some(
+              (c) => STUDY_LABELS.includes(c.categoryName) && c.score >= STUDY_MIN_SCORE,
+            ))
+          metrics = { phoneVisible, studyItem }
         }
 
         const latencyMs = performance.now() - startedAt
@@ -713,6 +754,8 @@ export function createInferenceService({ videoEl }) {
     destroy() {
       for (const t of Object.values(tasks)) t?.close?.()
       tasks.pose = tasks.face = tasks.object = tasks.hand = tasks.yolo = null
+      prevWrists = null
+      handMotionEma = null
       ready = false
       // 訂閱者清單一起清掉：整個 App 都要卸載了，留著一份指向已卸載元件的
       // 函式參照沒有任何用處，只是多一條可能讓元件活著的路。
