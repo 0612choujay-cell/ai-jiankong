@@ -28,7 +28,7 @@ export function isSupported() {
 }
 
 /**
- * 聽一次。回傳 { stop() }；結果透過 onResult('yes'|'no'|null) 回報，保證只回報一次。
+ * 聽一次。回傳 { stop() }；結果透過 onResult('yes'|'no'|null, reason) 回報，保證只回報一次。
  * null＝沒聽懂、逾時、被拒絕、或不支援。
  */
 export function listenForYesNo(onResult, { lang = 'zh-TW', timeoutMs = LISTEN_MS } = {}) {
@@ -36,15 +36,17 @@ export function listenForYesNo(onResult, { lang = 'zh-TW', timeoutMs = LISTEN_MS
   let done = false
   let rec = null
   let timer = 0
-  const finish = (answer) => {
+  // reason：沒有答案時的原因代碼（'unsupported'、'not-allowed'、'no-speech'、'timeout' 等），給畫面顯示用。
+  let lastError = null
+  const finish = (answer, reason = null) => {
     if (done) return
     done = true
     clearTimeout(timer)
     try { rec?.abort?.() } catch { /* 已經停了 */ }
     rec = null
-    onResult(answer)
+    onResult(answer, answer ? null : (reason ?? lastError ?? 'timeout'))
   }
-  if (!Ctor) { finish(null); return { stop() {} } }
+  if (!Ctor) { finish(null, 'unsupported'); return { stop() {} } }
 
   try {
     rec = new Ctor()
@@ -60,12 +62,12 @@ export function listenForYesNo(onResult, { lang = 'zh-TW', timeoutMs = LISTEN_MS
         }
       }
     }
-    rec.onerror = () => finish(null)
+    rec.onerror = (ev) => { lastError = ev?.error ?? 'error'; finish(null, lastError) }
     rec.onend = () => finish(null)
     rec.start()
     timer = setTimeout(() => finish(null), timeoutMs)
-  } catch {
-    finish(null)
+  } catch (e) {
+    finish(null, e?.name ?? 'start-failed')
   }
-  return { stop() { finish(null) } }
+  return { stop() { finish(null, 'stopped') } }
 }

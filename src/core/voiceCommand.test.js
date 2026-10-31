@@ -19,7 +19,7 @@ describe('listenForYesNo', () => {
     const cb = vi.fn()
     listenForYesNo(cb)
     expect(cb).toHaveBeenCalledTimes(1)
-    expect(cb).toHaveBeenCalledWith(null)
+    expect(cb).toHaveBeenCalledWith(null, 'unsupported')
     vi.unstubAllGlobals()
   })
   it('reports the first recognised answer once and ignores later events', () => {
@@ -35,7 +35,17 @@ describe('listenForYesNo', () => {
     rec.onresult({ resultIndex: 0, results: [[{ transcript: '好' }]] })
     rec.onend()
     expect(cb).toHaveBeenCalledTimes(1)
-    expect(cb).toHaveBeenCalledWith('yes')
+    expect(cb).toHaveBeenCalledWith('yes', null)
+    vi.unstubAllGlobals()
+  })
+  it('passes the error code through (e.g. mic denied)', () => {
+    let rec
+    class Fake { constructor() { rec = this } start() {} abort() {} }
+    vi.stubGlobal('window', { SpeechRecognition: Fake })
+    const cb = vi.fn()
+    listenForYesNo(cb)
+    rec.onerror({ error: 'not-allowed' })
+    expect(cb).toHaveBeenCalledWith(null, 'not-allowed')
     vi.unstubAllGlobals()
   })
   it('times out with null', () => {
@@ -45,7 +55,7 @@ describe('listenForYesNo', () => {
     const cb = vi.fn()
     listenForYesNo(cb, { timeoutMs: 1000 })
     vi.advanceTimersByTime(1000)
-    expect(cb).toHaveBeenCalledWith(null)
+    expect(cb).toHaveBeenCalledWith(null, 'timeout')
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })

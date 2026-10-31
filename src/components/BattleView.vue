@@ -104,6 +104,7 @@
            battle.phase。上面 .arena__boss 的 class 與這裡的 prop 綁的是
            同一組，不是第二套狀態機。BossSprite 自己不讀 store、不計時。 -->
       <p v-if="restBanner" class="idle-banner" aria-live="polite">{{ restBanner === 'listening' ? '🎤 請說：好／不要' : REST_PROMPT }}</p>
+      <p v-if="restFail" class="idle-banner" aria-live="polite">{{ restFail }}</p>
       <p v-if="idleBanner" class="idle-banner" aria-live="polite">{{ IDLE_TEXT }}</p>
       <p v-if="roaring" class="roar-text" aria-hidden="true">{{ PHONE_ALERT_TEXT }}！</p>
       <BossSprite
@@ -763,14 +764,28 @@ const REST_PROMPT = '要休息嗎？說好或不要'
 const REST_COOLDOWN_MS = 10 * 60_000
 const REST_SPEECH_FALLBACK_MS = 5000
 const restBanner = ref(null) // null | 'asking' | 'listening'
+const restFail = ref(null)
 let lastRestAskAt = -Infinity
 let restListener = null
 let restFallback = 0
 let restAskedAtLimit = false
-function onRestAnswer(answer) {
+const REST_FAIL_TEXT = {
+  unsupported: '此瀏覽器不支援語音辨識',
+  'not-allowed': '麥克風被拒絕，請允許',
+  'service-not-allowed': '麥克風被拒絕，請允許',
+  'audio-capture': '找不到麥克風',
+  'no-speech': '沒聽到你說話',
+  network: '語音辨識需要網路',
+}
+function onRestAnswer(answer, reason) {
   restListener = null
   restBanner.value = null
-  if (answer === 'yes') session.enterBreak()
+  if (answer === 'yes') { session.enterBreak(); return }
+  // 沒有結果時把原因顯示 3 秒（只有原因代碼對應的固定句子，不含任何聲音內容）。
+  if (!answer && reason !== 'stopped') {
+    restFail.value = REST_FAIL_TEXT[reason] ?? '沒聽清楚，不休息'
+    setTimeout(() => { restFail.value = null }, 3000)
+  }
 }
 function startRestListening() {
   clearTimeout(restFallback)
