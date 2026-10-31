@@ -72,16 +72,11 @@ describe('CoachBanner：姿態提示', () => {
     el.remove()
   })
 
-  it('showBreakButton 為 true 時出現「休息一下」按鈕，點擊 emit break', () => {
-    let called = false
+  it('即使 showBreakButton 為 true，也不再出現「休息一下」按鈕（使用者要求刪除）', () => {
     const { el, app } = mountWithHandlers(
       { message: { kind: 'safety', text: '眼睛快閉上囉', showBreakButton: true } },
-      { break: () => { called = true } },
     )
-    const btn = [...el.querySelectorAll('button')].find((b) => b.textContent.includes('休息一下'))
-    expect(btn).not.toBeUndefined()
-    btn.click()
-    expect(called).toBe(true)
+    expect([...el.querySelectorAll('button')].some((b) => b.textContent.includes('休息一下'))).toBe(false)
     app.unmount()
     el.remove()
   })

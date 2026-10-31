@@ -11,9 +11,6 @@
     <button v-if="message.trapId" class="undo" @click="$emit('undo', message.trapId)">
       {{ message.icon === 'away' ? '我沒有離開' : '我沒有在玩那個' }}
     </button>
-    <button v-if="message.showBreakButton" class="undo" @click="$emit('break')">
-      休息一下
-    </button>
   </div>
 </template>
 
