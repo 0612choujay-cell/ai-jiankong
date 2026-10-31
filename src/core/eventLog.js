@@ -7,9 +7,6 @@
  */
 export const EVENT_LOG_MAX = 200
 
-/** 記憶體裡最多同時留幾張照片（每張約 10–20KB） */
-export const EVENT_PHOTO_MAX = 30
-
 export const EVENT_REASON_LABEL = {
   slouch: '駝背',
   forwardHead: '低頭',
@@ -71,17 +68,6 @@ export function createEventLog({ max = EVENT_LOG_MAX } = {}) {
       if (entries.length > max) entries = entries.slice(entries.length - max)
     },
     entries() { return entries.slice() },
-    /** 幫最近新增的 n 筆掛上照片（記憶體內的縮圖 data URL，只留最後 PHOTO_MAX 張） */
-    attachPhoto(n, url) {
-      if (!url) return
-      for (const e of entries.slice(-n)) e.photo = url
-      let kept = 0
-      for (let i = entries.length - 1; i >= 0; i--) {
-        if (!entries[i].photo) continue
-        kept += 1
-        if (kept > EVENT_PHOTO_MAX) delete entries[i].photo
-      }
-    },
     reset() { entries = []; prev = new Set() },
   }
 }
