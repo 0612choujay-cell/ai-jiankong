@@ -53,7 +53,7 @@ function mount(props = {}) {
 }
 
 beforeEach(() => {
-  // 倒數跟「跳過備妥 3 秒後解除」都是真實時間；沒有假時鐘就只能 sleep 三分鐘。
+  // 倒數是真實時間；沒有假時鐘就只能 sleep 三分鐘。
   vi.useFakeTimers()
 })
 
@@ -102,68 +102,13 @@ describe('BreakScreen：三分鐘倒數', () => {
   })
 })
 
-describe('BreakScreen：跳過要點兩下（一下就跳過等於沒有休息回合）', () => {
-  it('第一下只把按鈕變成「再按一次就跳過休息」，不 emit done', async () => {
+describe('BreakScreen：沒有「跳過休息」按鈕（使用者要求刪除）', () => {
+  it('畫面上只有「休息夠了，繼續討伐」一顆按鈕', async () => {
     const m = mount()
     await nextTick()
-
-    m.btn('跳過休息').click()
-    await nextTick()
-
-    expect(m.btn('再按一次就跳過休息')).not.toBeUndefined()
-    expect(m.doneCount()).toBe(0)
-
-    m.unmount()
-  })
-
-  it('連按兩下才 emit done', async () => {
-    const m = mount()
-    await nextTick()
-
-    m.btn('跳過休息').click()
-    await nextTick()
-    m.btn('再按一次就跳過休息').click()
-    await nextTick()
-
-    expect(m.doneCount()).toBe(1)
-    m.unmount()
-  })
-
-  it('第一下之後 3 秒沒有第二下，備妥狀態要解除（不然誤觸兩次也會跳過）', async () => {
-    const m = mount()
-    await nextTick()
-
-    m.btn('跳過休息').click()
-    await nextTick()
-    expect(m.btn('再按一次就跳過休息')).not.toBeUndefined()
-
-    vi.advanceTimersByTime(3000)
-    await nextTick()
-
-    expect(m.btn('再按一次就跳過休息'), '3 秒後要變回原樣').toBeUndefined()
-    expect(m.btn('跳過休息')).not.toBeUndefined()
-    expect(m.doneCount()).toBe(0)
-
-    // 解除之後再按一下，仍然只是重新備妥，不會跳過
-    m.btn('跳過休息').click()
-    await nextTick()
-    expect(m.doneCount()).toBe(0)
-
-    m.unmount()
-  })
-
-  it('第一下之後 2.9 秒內按第二下仍然算數（3 秒不是「按太快不算」）', async () => {
-    const m = mount()
-    await nextTick()
-
-    m.btn('跳過休息').click()
-    await nextTick()
-    vi.advanceTimersByTime(2900)
-    await nextTick()
-    m.btn('再按一次就跳過休息').click()
-    await nextTick()
-
-    expect(m.doneCount()).toBe(1)
+    expect(m.btn('跳過休息')).toBeUndefined()
+    expect(m.btn('再按一次就跳過休息')).toBeUndefined()
+    expect(m.btn('休息夠了，繼續討伐')).not.toBeUndefined()
     m.unmount()
   })
 })
@@ -199,10 +144,7 @@ describe('BreakScreen：卸載時把 timer 清乾淨', () => {
   it('卸載之後不留任何還在跑的 timer', async () => {
     const m = mount()
     await nextTick()
-    // 倒數 interval 一定在跑；再按一下跳過，讓 skipTimer 也在跑。
-    m.btn('跳過休息').click()
-    await nextTick()
-    expect(vi.getTimerCount(), '此時兩個 timer 都該在跑').toBeGreaterThanOrEqual(2)
+    expect(vi.getTimerCount(), '倒數 interval 該在跑').toBeGreaterThanOrEqual(1)
 
     m.unmount()
 
@@ -282,7 +224,7 @@ describe('BreakScreen：休息畫面不得觸發任何 TTS（休戰台詞是靜�
 
     const m = mount()
     await nextTick()
-    m.btn('跳過休息').click()
+    m.btn('休息夠了，繼續討伐').click()
     await nextTick()
     vi.advanceTimersByTime(3 * 60_000)
     await nextTick()

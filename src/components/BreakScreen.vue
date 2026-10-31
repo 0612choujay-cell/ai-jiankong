@@ -10,10 +10,6 @@
     <p class="boss-line">{{ bossLine }}</p>
 
     <button class="primary done" @click="finish">休息夠了，繼續討伐</button>
-
-    <button class="skip" @click="onSkip">
-      {{ skipArmed ? '再按一次就跳過休息' : '跳過休息' }}
-    </button>
   </div>
 </template>
 
@@ -35,7 +31,6 @@ const props = defineProps({
 })
 
 const BREAK_MS = 3 * 60_000
-const SKIP_ARMED_MS = 3000
 
 /**
  * 伸展建議。
@@ -59,7 +54,6 @@ const MOVES = [
 ]
 
 const remain = ref(BREAK_MS)
-const skipArmed = ref(false)
 
 /**
  * 魔王的休戰台詞：**靜態顯示，不朗讀**。
@@ -95,12 +89,11 @@ const mm = computed(() => String(Math.floor(remain.value / 60_000)).padStart(2, 
 const ss = computed(() => String(Math.floor((remain.value % 60_000) / 1000)).padStart(2, '0'))
 
 let timer = 0
-let skipTimer = 0
 
 /**
  * 「休息結束」只准發生一次。
  *
- * 三個來源都走這裡：倒數歸零、按「休息夠了」、連按兩下「跳過休息」。少了這道
+ * 兩個來源都走這裡：倒數歸零、按「休息夠了」。（「跳過休息」按鈕已依使用者要求刪除。）少了這道
  * 閘，同一次休息會 emit 兩次 done——而 done 在 App.vue 那邊可能是
  * `startBattle()`（結算頁進來的那條路），等於連開兩場，第一場立刻被第二場
  * 取代。這個年齡層「按了沒反應就再按一次」是預設行為（session.js 對兩顆
@@ -113,20 +106,8 @@ function finish() {
   if (finished) return
   finished = true
   clearInterval(timer)
-  clearTimeout(skipTimer)
   timer = 0
-  skipTimer = 0
   emit('done')
-}
-
-// 跳過要點兩下：一下就跳過等於沒有休息回合，完全不給跳過又會卡住想繼續的人。
-// 3 秒沒有第二下就解除備妥狀態——不解除的話，休息到一半誤觸一下，兩分鐘後
-// 再誤觸一下就直接跳過了，那跟一下就跳過沒有差別。
-function onSkip() {
-  if (skipArmed.value) { finish(); return }
-  skipArmed.value = true
-  clearTimeout(skipTimer)
-  skipTimer = setTimeout(() => { skipArmed.value = false }, SKIP_ARMED_MS)
 }
 
 onMounted(() => {
@@ -141,8 +122,8 @@ onMounted(() => {
 
 // timer 不清掉的話，休息畫面卸載之後那個 interval 還會每秒跑一次、而且還握著
 // 一個會 emit('done') 的 closure（已經被 finished 擋住，但一個永遠跑下去的
-// interval 本身就是洩漏）。skipTimer 同理。
-onBeforeUnmount(() => { clearInterval(timer); clearTimeout(skipTimer) })
+// interval 本身就是洩漏）。
+onBeforeUnmount(() => { clearInterval(timer) })
 </script>
 
 <style scoped>
@@ -155,5 +136,4 @@ onBeforeUnmount(() => { clearInterval(timer); clearTimeout(skipTimer) })
          max-width: 28em; }
 .boss-line { font-size: var(--fs-number); color: var(--c-boss); margin: 0; }
 .done { min-width: 280px; }
-.skip { min-height: var(--tap-min); padding: 0 18px; background: transparent; color: var(--c-text-dim); }
 </style>
