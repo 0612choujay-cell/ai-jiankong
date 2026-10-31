@@ -3,8 +3,8 @@ import { classifyAnswer, listenForYesNo } from './voiceCommand.js'
 
 describe('classifyAnswer', () => {
   it('maps yes-like and no-like answers', () => {
-    for (const t of ['好', '好啊', 'ok', 'OK', 'Okay', '可以', '好我休息']) expect(classifyAnswer(t), t).toBe('yes')
-    for (const t of ['不要', '不用了', 'no', 'No', '我不要', '不好', '不休息']) expect(classifyAnswer(t), t).toBe('no')
+    for (const t of ['好', '好啊', 'ok', 'OK', 'Okay', '可以', '好我休息', '休息', 'rest', 'Rest', 'take a rest', 'break']) expect(classifyAnswer(t), t).toBe('yes')
+    for (const t of ['不要', '不用了', 'no', 'No', '我不要', '不好', '不休息', 'no rest', "don't rest"]) expect(classifyAnswer(t), t).toBe('no')
   })
   it('returns null for empty or unrelated speech', () => {
     expect(classifyAnswer('')).toBeNull()

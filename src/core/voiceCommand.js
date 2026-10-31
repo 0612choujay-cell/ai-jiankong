@@ -10,8 +10,8 @@
  */
 export const LISTEN_MS = 8000
 
-const NO = /不要|不用|不想|不休息|不行|沒有|算了|不|\bno\b|nope|nah/i
-const YES = /好|ok|okay|可以|要|休息|對|是|\byes\b|yeah|sure/i
+const NO = /不要|不用|不想|不休息|不行|沒有|算了|不|\bno\b|nope|nah|don'?t|do not|\bnot\b/i
+const YES = /好|ok|okay|可以|要|休息|對|是|\brest\b|\bbreak\b|take a rest|\byes\b|yeah|sure/i
 
 /** 把辨識到的一串文字分類；聽不出來回 null。「不好」這種否定先於「好」判斷。 */
 export function classifyAnswer(text) {
