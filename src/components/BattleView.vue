@@ -239,7 +239,8 @@ import { createPostureCoach } from '../core/postureCoach.js'
 import { EVENT_REASON_LABEL } from '../core/eventLog.js'
 import { copyKeyForEvent } from '../core/bossDialogue.js'
 import { BATTLE } from '../core/battleConfig.js'
-import { createBackAlarm, loadAlarmBuffer } from '../core/backAlarm.js'
+import { createBackAlarm } from '../core/backAlarm.js'
+import { getSharedCtx, getAlarmBuffer } from '../core/sharedAudio.js'
 import { playGong, speakNow, PHONE_ALERT_TEXT, PHONE_ALERT_LANG, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
 
 const props = defineProps({
@@ -686,7 +687,6 @@ function onEvents(events) {
 
 // 拿出手機：敲鑼＋念一句，手機還在畫面上就每 PHONE_ALERT_REPEAT_MS 重複，收起來才停。
 // 遵守 🔊／🔇 開關。鑼聲用自己的 AudioContext（開戰是使用者手勢之後，瀏覽器允許出聲）。
-let gongCtx = null
 let phoneAlertTimer = 0
 const roaring = ref(false)
 let roarTimer = 0
@@ -711,9 +711,7 @@ function phoneAlertOnce() {
   roaring.value = false
   clearTimeout(roarTimer)
   clearTimeout(roarFallback)
-  try {
-    gongCtx = gongCtx || new (window.AudioContext || window.webkitAudioContext)()
-  } catch { gongCtx = null }
+  const gongCtx = getSharedCtx()
   // 魔王大喊「不要再滑了」：直接念，不受 🔊／🔇 開關影響。
   const sent = speakNow(PHONE_ALERT_TEXT, PHONE_ALERT_LANG, { onStart: startRoar, onEnd: endRoar })
   if (!sent) {
@@ -743,15 +741,9 @@ watch(() => s.idle, (on) => {
   idleTimer = setInterval(idleOnce, IDLE_REPEAT_MS)
 })
 // 切到別的網頁／App：嗶嗶嗶＋ "go back go back"，回來才停。使用者自己按暫停就不響。
-let alarmBuffer = null
 const backAlarm = createBackAlarm({
-  getBuffer: () => alarmBuffer,
-  getCtx: () => {
-    try {
-      gongCtx = gongCtx || new (window.AudioContext || window.webkitAudioContext)()
-    } catch { gongCtx = null }
-    return gongCtx
-  },
+  getBuffer: getAlarmBuffer,
+  getCtx: getSharedCtx,
 })
 function onVisibility() {
   if (document.hidden) {
@@ -845,11 +837,7 @@ function pollHud() {
 
 onMounted(() => {
   document.addEventListener('visibilitychange', onVisibility)
-  // 預先載入「分心了」音檔（開戰是使用者手勢之後，可以建立 AudioContext）。
-  try {
-    gongCtx = gongCtx || new (window.AudioContext || window.webkitAudioContext)()
-    loadAlarmBuffer(gongCtx).then((b) => { alarmBuffer = b })
-  } catch { /* 沒有 WebAudio 就退回瀏覽器語音 */ }
+  getAlarmBuffer() // 確保「分心了」音檔已在載入
   attachPreview()
   offEvents = session.onBattleEvent(onEvents)
   // 訊息過期／鏡頭 stream 是否已就緒都需要輪詢；4Hz 符合「閒置時每秒重繪 < 5 次」。
@@ -864,8 +852,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', onVisibility)
   backAlarm.stop()
   stopPhoneAlert()
-  gongCtx?.close?.()
-  gongCtx = null
   offEvents?.()
   clearInterval(uiTimer)
   clearTimeout(hudTapTimer)

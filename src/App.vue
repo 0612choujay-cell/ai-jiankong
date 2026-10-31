@@ -312,6 +312,7 @@ import PermissionGate from './components/PermissionGate.vue'
 import TaskSelector from './components/TaskSelector.vue'
 import BattleView from './components/BattleView.vue'
 import StatsDashboard from './components/StatsDashboard.vue'
+import { unlockAudioFromGesture } from './core/sharedAudio.js'
 import BreakScreen from './components/BreakScreen.vue'
 import InstallGuide from './components/InstallGuide.vue'
 import OfflineWarmup from './components/OfflineWarmup.vue'
@@ -354,6 +355,7 @@ async function onTaskChosen(payload) {
   // 多出來的那 5 秒校準不會讓解鎖失效。完整推導見 session.js 的
   // primeVoiceFromGesture()。
   session.primeVoiceFromGesture()
+  unlockAudioFromGesture() // 同一個手勢裡解鎖音效（切到別的網頁的警報要靠它出聲）
   session.setTask(payload)
   // 沒有校準畫面了：清掉上一位訪客的基準，開打後由 session.js 在前 8 秒
   // 靜默取樣建立新的（見 AUTO_CAL_MS）。順序仍是 setTask → setCalibration →
