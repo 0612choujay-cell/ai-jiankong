@@ -518,7 +518,7 @@ describe('BattleView：事件 → 視覺特效與魔王台詞', () => {
     window.matchMedia = original
   })
 
-  it('drowsy 事件：安全提示（含休息按鈕）優先序最高，蓋過魔王台詞', async () => {
+  it('drowsy 事件：安全提示優先序最高，蓋過魔王台詞', async () => {
     fakeState.drowsy = true
     const { el, app } = mount()
     await nextTick()
@@ -528,52 +528,8 @@ describe('BattleView：事件 → 視覺特效與魔王台詞', () => {
 
     const banner = el.querySelector('.banner')
     expect(banner.classList.contains('safety')).toBe(true)
-    const breakBtn = [...el.querySelectorAll('button')].find((b) => b.textContent.includes('休息一下'))
-    expect(breakBtn).not.toBeUndefined()
-
-    app.unmount()
-    el.remove()
-  })
-
-  // Task 20 更正 4：這裡原本斷言的是「呼叫 session.togglePause()」——那是還沒有
-  // 獨立休息畫面時「借用暫停機制」的權宜做法。休息畫面做出來之後，這個呼叫點
-  // 必須改走 enterBreak()，否則就是兩條路做同一件事而且做得不一樣（一條只是
-  // 暫停在戰鬥畫面上，一條有倒數與伸展建議）。護欄裝在**會違規的那一行**上：
-  // BattleView 的 onBreak() 自己，不是 store 那一層。
-  it('點擊「休息一下」呼叫 session.enterBreak()，不是借用 togglePause()，也不直接改 state.screen', async () => {
-    fakeState.drowsy = true
-    const { el, app } = mount()
-    await nextTick()
-    fireEvents([{ type: 'drowsy' }])
-    await nextTick()
-
-    const breakBtn = [...el.querySelectorAll('button')].find((b) => b.textContent.includes('休息一下'))
-    breakBtn.click()
-
-    expect(enterBreakSpy).toHaveBeenCalledTimes(1)
-    expect(togglePauseSpy, '暫停與否由 enterBreak() 內部決定，這裡不得自己按一次暫停').not.toHaveBeenCalled()
-    expect(fakeState.screen).toBe('battle') // 沒有人偷改 screen
-
-    app.unmount()
-    el.remove()
-  })
-
-  it('已經暫停中時點擊「休息一下」照樣進休息回合（而且仍然不自己呼叫 togglePause）', async () => {
-    fakeState.drowsy = true
-    fakeState.paused = true
-    const { el, app } = mount()
-    await nextTick()
-    fireEvents([{ type: 'drowsy' }])
-    await nextTick()
-
-    const breakBtn = [...el.querySelectorAll('button')].find((b) => b.textContent.includes('休息一下'))
-    breakBtn.click()
-
-    // 舊行為是「暫停中按休息＝什麼都不會發生」，小孩會以為按壞了。現在一樣
-    // 進得去休息回合；「已經暫停中就不要再 toggle 一次」那條判斷搬進了
-    // enterBreak()（session.break.test.js 有對應的測試），不留在這裡重複一份。
-    expect(enterBreakSpy).toHaveBeenCalledTimes(1)
-    expect(togglePauseSpy).not.toHaveBeenCalled()
+    // 「休息一下」按鈕已依使用者要求刪除：安全提示照樣出現，但不再帶按鈕。
+    expect([...el.querySelectorAll('button')].some((b) => b.textContent.includes('休息一下'))).toBe(false)
 
     app.unmount()
     el.remove()
