@@ -251,11 +251,11 @@ function metaCsp() {
 }
 
 describe('紅線：public/_headers 的宣告式防線', () => {
-  it('Permissions-Policy 那一行逐字存在（camera=(self), microphone=()）', () => {
+  it('Permissions-Policy 那一行逐字存在（camera=(self), microphone=(self)；麥克風只給同源，用在「要不要休息」的語音回答）', () => {
     expect(fileExists(HEADERS_FILE)).toBe(true)
     const text = readFileSync(HEADERS_FILE, 'utf8')
     expect(
-      text.includes('Permissions-Policy: camera=(self), microphone=()'),
+      text.includes('Permissions-Policy: camera=(self), microphone=(self)'),
       '麥克風的宣告式防線。複審把這一行整行刪掉，666 條測試一條都沒紅。',
     ).toBe(true)
   })
@@ -327,6 +327,11 @@ describe('紅線：禁用 API 全專案零命中（複審：這一條完全沒�
       const hits = []
       for (const file of allSourceFiles()) {
         if (readCode(file).includes(name)) hits.push(rel(file))
+      }
+      // 使用者明確要求「說好／不要」回答休息：SpeechRecognition 只准出現在這個模組（與它的測試）。
+      if (name === 'SpeechRecognition') {
+        const allowed = ['src/core/voiceCommand.js', 'src/core/voiceCommand.test.js']
+        for (let i = hits.length - 1; i >= 0; i--) if (allowed.includes(hits[i])) hits.splice(i, 1)
       }
       const reason = FORBIDDEN_APIS.find((a) => a.name === name).reason
       expect(hits, `${name} 是這個專案的紅線：${reason}`).toEqual([])

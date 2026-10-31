@@ -21,7 +21,7 @@
 # ⚠ 未驗證的風險：CSP 會不會誤擋 MediaPipe 載入 wasm／模型，jsdom 測不出來，
 #   只能在 iPadOS Safari 真機上確認。展前檢查清單有對應的必做項目。
 /*
-  Permissions-Policy: camera=(self), microphone=()
+  Permissions-Policy: camera=(self), microphone=(self)
   Content-Security-Policy: connect-src 'self' blob: data:
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
