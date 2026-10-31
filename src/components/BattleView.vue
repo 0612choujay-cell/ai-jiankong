@@ -239,8 +239,7 @@ import { createPostureCoach } from '../core/postureCoach.js'
 import { EVENT_REASON_LABEL } from '../core/eventLog.js'
 import { copyKeyForEvent } from '../core/bossDialogue.js'
 import { BATTLE } from '../core/battleConfig.js'
-import { createBackAlarm } from '../core/backAlarm.js'
-import { getSharedCtx, getAlarmBuffer } from '../core/sharedAudio.js'
+import { getSharedCtx } from '../core/sharedAudio.js'
 import { playGong, speakNow, PHONE_ALERT_TEXT, PHONE_ALERT_LANG, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
 
 const props = defineProps({
@@ -740,18 +739,6 @@ watch(() => s.idle, (on) => {
   idleOnce()
   idleTimer = setInterval(idleOnce, IDLE_REPEAT_MS)
 })
-// 切到別的網頁／App：嗶嗶嗶＋ "go back go back"，回來才停。使用者自己按暫停就不響。
-const backAlarm = createBackAlarm({
-  getBuffer: getAlarmBuffer,
-  getCtx: getSharedCtx,
-})
-function onVisibility() {
-  if (document.hidden) {
-    if (!s.paused) backAlarm.start()
-  } else {
-    backAlarm.stop()
-  }
-}
 function stopPhoneAlert() {
   clearInterval(idleTimer)
   clearTimeout(roarFallback)
@@ -836,8 +823,6 @@ function pollHud() {
 }
 
 onMounted(() => {
-  document.addEventListener('visibilitychange', onVisibility)
-  getAlarmBuffer() // 確保「分心了」音檔已在載入
   attachPreview()
   offEvents = session.onBattleEvent(onEvents)
   // 訊息過期／鏡頭 stream 是否已就緒都需要輪詢；4Hz 符合「閒置時每秒重繪 < 5 次」。
@@ -849,8 +834,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('visibilitychange', onVisibility)
-  backAlarm.stop()
   stopPhoneAlert()
   offEvents?.()
   clearInterval(uiTimer)

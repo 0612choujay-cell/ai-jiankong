@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 
 describe('sharedAudio', () => {
-  it('creates one shared context, resumes it inside the gesture, and builds the embedded alarm clip synchronously', async () => {
+  it('creates one shared context, resumes it inside the gesture,', async () => {
     const made = []
     class FakeCtx {
       constructor() { this.state = 'suspended'; this.destination = {}; made.push(this) }
@@ -16,9 +16,6 @@ describe('sharedAudio', () => {
     expect(m.getSharedCtx()).toBe(made[0])
     expect(made).toHaveLength(1)
     expect(made[0].resume).toHaveBeenCalled()
-    const buf = m.getAlarmBuffer()
-    expect(buf.length).toBeGreaterThan(10000) // 內嵌的「分心了」PCM，同步建好
-    expect(buf.copyToChannel).toHaveBeenCalled()
     vi.unstubAllGlobals()
   })
 })

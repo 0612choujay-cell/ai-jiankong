@@ -32,7 +32,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return
 
   // 模型與 wasm 走獨立 cache，失敗可重試（不做續傳）
-  if (url.pathname.startsWith('/models/') || url.pathname.startsWith('/wasm/') || url.pathname.startsWith('/ort/') || url.pathname.startsWith('/sounds/')) {
+  if (url.pathname.startsWith('/models/') || url.pathname.startsWith('/wasm/') || url.pathname.startsWith('/ort/')) {
     event.respondWith(cacheFirst(request, MODEL_CACHE))
     return
   }
