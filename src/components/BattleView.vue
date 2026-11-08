@@ -103,12 +103,6 @@
            / bossUltimate，後者由 ultimates 陣列推導 / bossAttacking）加上
            battle.phase。上面 .arena__boss 的 class 與這裡的 prop 綁的是
            同一組，不是第二套狀態機。BossSprite 自己不讀 store、不計時。 -->
-      <div v-if="restBanner" class="idle-banner rest-ask" aria-live="polite">
-        <p>{{ restBanner === 'listening' ? '🎤 請說：好／不要' : REST_PROMPT }}</p>
-        <button type="button" @click="onRestAnswer('yes')">好</button>
-        <button type="button" @click="onRestAnswer('no')">不要</button>
-      </div>
-      <p v-if="restFail" class="idle-banner" aria-live="polite">{{ restFail }}</p>
       <p v-if="idleBanner" class="idle-banner" aria-live="polite">{{ IDLE_TEXT }}</p>
       <p v-if="roaring" class="roar-text" aria-hidden="true">{{ PHONE_ALERT_TEXT }}！</p>
       <BossSprite
@@ -255,7 +249,6 @@ import { createPostureCoach } from '../core/postureCoach.js'
 import { EVENT_REASON_LABEL } from '../core/eventLog.js'
 import { copyKeyForEvent } from '../core/bossDialogue.js'
 import { BATTLE, BREAK_AFTER_MS } from '../core/battleConfig.js'
-import { listenContinuously } from '../core/voiceCommand.js'
 import { createBackAlarm } from '../core/backAlarm.js'
 import { getSharedCtx, getAlarmBuffer } from '../core/sharedAudio.js'
 import { playGong, speakNow, PHONE_ALERT_TEXT, PHONE_ALERT_LANG, PHONE_ALERT_REPEAT_MS } from '../core/phoneAlert.js'
@@ -691,7 +684,6 @@ function onEvents(events) {
         break
       case 'drowsy':
         sayBoss(e, now)
-        askRest()
         break
       case 'phase':
       case 'regroupStart':
@@ -772,62 +764,6 @@ function onVisibility() {
   } else {
     backAlarm.stop()
   }
-}
-// 叫你休息：念一句、顯示提示，念完開麥克風聽「好／ok」→ 進休息倒數、「不要／no」→ 不休息。
-// 觸發：偵測到想睡，或戰鬥滿 BREAK_AFTER_MS；問過之後 REST_COOLDOWN_MS 內不再問。
-const REST_PROMPT = '要休息嗎？'
-const REST_COOLDOWN_MS = 10 * 60_000
-const REST_WAIT_MS = 15_000
-const REST_SPEECH_FALLBACK_MS = 5000
-const restBanner = ref(null) // null | 'asking' | 'listening'
-const restFail = ref(null)
-let lastRestAskAt = -Infinity
-let restListener = null
-let micListener = null
-let restFallback = 0
-let restAskedAtLimit = false
-const REST_FAIL_TEXT = {
-  unsupported: '此瀏覽器不支援語音辨識',
-  'not-allowed': '麥克風被拒絕，請允許',
-  'service-not-allowed': '麥克風被拒絕，請允許',
-  'audio-capture': '找不到麥克風',
-  'no-speech': '沒聽到你說話',
-  network: '語音辨識需要網路',
-}
-function onRestAnswer(answer, reason) {
-  clearTimeout(restFallback)
-  restListener?.stop()
-  restListener = null
-  restBanner.value = null
-  if (answer === 'yes') { session.enterBreak(); return }
-  // 沒有結果時把原因顯示 3 秒（只有原因代碼對應的固定句子，不含任何聲音內容）。
-  if (!answer && reason !== 'stopped') {
-    restFail.value = REST_FAIL_TEXT[reason] ?? '沒聽到回答'
-    setTimeout(() => { restFail.value = null }, 3000)
-  }
-}
-function startRestListening() {
-  clearTimeout(restFallback)
-  if (restBanner.value !== 'asking') return
-  // 麥克風從戰鬥一開始就開著（見 onMounted），這裡只是「開始接受回答」。
-  // 問題念完後再等 0.5 秒才收，避免把問題語音的尾音當成回答。
-  restBanner.value = 'listening'
-  restFallback = setTimeout(() => onRestAnswer(null, 'stopped'), REST_WAIT_MS)
-}
-function askRest() {
-  const now = performance.now()
-  if (restBanner.value || s.paused || now - lastRestAskAt < REST_COOLDOWN_MS) return
-  lastRestAskAt = now
-  restBanner.value = 'asking'
-  const sent = speakNow(REST_PROMPT, 'zh-TW', { onEnd: startRestListening })
-  if (!sent) startRestListening()
-  else restFallback = setTimeout(startRestListening, REST_SPEECH_FALLBACK_MS)
-}
-function stopRest() {
-  clearTimeout(restFallback)
-  restListener?.stop()
-  restListener = null
-  restBanner.value = null
 }
 function stopPhoneAlert() {
   clearInterval(idleTimer)
@@ -910,17 +846,9 @@ function pollHud() {
   hudPolled.rafMax = ps.rafMax
   hudPolled.rounds = ps.rounds
   hudPolled.sessionSec = (battle.value?.elapsedMs ?? 0) / 1000
-  if (!restAskedAtLimit && (battle.value?.elapsedMs ?? 0) >= BREAK_AFTER_MS) {
-    restAskedAtLimit = true
-    askRest()
-  }
 }
 
 onMounted(() => {
-  // 開始戰鬥就開麥克風（使用者要求）：只在「要休息嗎？」等你回答的時候才採用聽到的「好／不要」。
-  micListener = listenContinuously((answer) => {
-    if (restBanner.value === 'listening') onRestAnswer(answer)
-  }, { onError: (code) => { restFail.value = REST_FAIL_TEXT[code] ?? '麥克風無法使用'; setTimeout(() => { restFail.value = null }, 4000) } })
   document.addEventListener('visibilitychange', onVisibility)
   getAlarmBuffer() // 確保「分心了」音檔已在載入
   attachPreview()
@@ -934,9 +862,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  micListener?.stop()
-  micListener = null
-  stopRest()
   document.removeEventListener('visibilitychange', onVisibility)
   backAlarm.stop()
   stopPhoneAlert()
@@ -1277,9 +1202,6 @@ onBeforeUnmount(() => {
 .score { font-size: var(--fs-body); color: var(--c-text-dim); }
 .task-label { font-size: var(--fs-body); color: var(--c-text); }
 .event-log { position: absolute; left: var(--gap); top: 30%; z-index: 4; }
-.rest-ask { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
-.rest-ask p { margin: 0; }
-.rest-ask button { min-height: var(--tap-min); padding: 0 20px; font-size: 24px; }
 .idle-banner {
   position: absolute; left: 50%; top: 12%; transform: translateX(-50%); z-index: 5; margin: 0;
   padding: 8px 20px; border-radius: 12px; font-size: 40px; font-weight: 800; color: #fff;
