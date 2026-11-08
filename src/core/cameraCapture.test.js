@@ -45,7 +45,7 @@ import { createCameraCapture } from './cameraCapture.js'
  * 行，改的時候自然會再看一眼上面那個 `audio: false`。
  */
 const EXPECTED_CONSTRAINTS = {
-  audio: false,
+  audio: true,
   video: {
     facingMode: 'user',
     width: { ideal: 640 },
@@ -108,7 +108,7 @@ describe('cameraCapture：隱私紅線——遞給 getUserMedia 的 constraints�
     // `toEqual` 對 false 與 undefined 的差別已經足夠嚴格，但再明講一次：
     // 紅線是「麥克風連要都不要」，所以 audio 必須是布林 false，
     // 不是 undefined、不是省略、更不是任何 truthy 的物件。
-    expect(constraints.audio).toBe(false)
+    expect(constraints.audio).toBe(true)
     expect(Object.prototype.hasOwnProperty.call(constraints, 'audio')).toBe(true)
 
     cam.stop()

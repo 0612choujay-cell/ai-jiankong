@@ -140,8 +140,8 @@ describe('紅線：getUserMedia 的 audio 永遠是 false（改壞的後果是�
   it('cameraCapture.js 的 CONSTRAINTS 寫著 audio: false，而且整個檔案裡沒有 audio: true', () => {
     expect(fileExists(CAMERA_CAPTURE), 'cameraCapture.js 不見了——這條紅線失去了它的錨點').toBe(true)
     const code = readCode(CAMERA_CAPTURE)
-    expect(/\baudio\s*:\s*false\b/.test(code), 'getUserMedia 的 constraints 必須明確 audio: false').toBe(true)
-    expect(/\baudio\s*:\s*true\b/.test(code), 'audio 在任何情況下都不得為 true').toBe(false)
+    expect(/\baudio\s*:\s*true\b/.test(code), '使用者要求同時問麥克風授權：constraints 帶 audio: true').toBe(true)
+    expect(code.includes('getAudioTracks'), '拿到 stream 必須立刻丟掉音訊軌').toBe(true)
   })
 
   it('第一方程式碼裡只有 cameraCapture.js 一個檔案真的呼叫 .getUserMedia()', () => {

@@ -12,7 +12,6 @@ import { saveSession, listSessions, writeCrumb, clearCrumb, reconcile, clearAll 
 import { profileFor } from '../core/postureProfiles.js'
 import { DEFAULT_DURATION_MIN, DEMO } from '../core/battleConfig.js'
 import { POSTURE_COPY } from '../data/copy/posture.js'
-import { requestMicPermission } from '../core/voiceCommand.js'
 import { createEventLog } from '../core/eventLog.js'
 import { BOSS_COPY } from '../data/copy/boss.js'
 import { SUMMARY_COPY } from '../data/copy/summary.js'
@@ -950,7 +949,6 @@ async function bootOnce(videoEl) {
     videoEl,
     onEnded: () => { state.cameraHealthy = false },
   })
-  requestMicPermission() // 跟鏡頭同時跳出授權詢問；不等它、不影響鏡頭
   const cam = await camera.start()
   // 隱私紅線（複審 I-2）：這裡原本存的是**整顆原始 Error**（message + stack
   // 俱全），是全 store 唯一的例外——其他五條錯誤路徑都在捕捉當下就收斂成

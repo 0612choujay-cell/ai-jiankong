@@ -1,11 +1,12 @@
 /**
  * 唯一碰 getUserMedia 的檔。
  *
- * 隱私紅線：audio 永遠是 false，任何情況都不得改。
- * 麥克風連要都不要，評審問起來才能直接回答「這個 App 沒有要過麥克風權限」。
+ * 使用者要求鏡頭與麥克風「同時問授權」：constraints 帶 audio:true 只為了讓 iOS 一次
+ * 跳出同一個詢問；拿到 stream 後立刻 stop 並丟掉所有音訊軌，這裡不錄音、不聽。
+ * （語音辨識是 voiceCommand.js 自己開的。）
  */
 const CONSTRAINTS = {
-  audio: false,
+  audio: true,
   video: {
     facingMode: 'user',
     width: { ideal: 640 },
@@ -46,6 +47,7 @@ export function createCameraCapture({ videoEl, onEnded }) {
       next.getTracks().forEach(t => t.stop())
       return false
     }
+    for (const a of (next.getAudioTracks?.() ?? [])) { a.stop(); next.removeTrack?.(a) }
     stream = next
     const t = track()
     if (t) t.onended = () => onEnded?.()
