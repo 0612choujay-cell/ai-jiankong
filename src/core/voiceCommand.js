@@ -156,3 +156,20 @@ export function listenContinuously(onAnswer, { lang = 'zh-TW', onError } = {}) {
     },
   }
 }
+
+/**
+ * 開機時跟鏡頭權限一起問麥克風（使用者要求「同時問」）。不另外碰 getUserMedia
+ * （那是 cameraCapture.js 的專屬紅線），而是短暫 start() 一次語音辨識來觸發
+ * 麥克風／語音辨識授權詢問，1.5 秒後就 abort，不聽、不存。失敗一律吞掉。
+ */
+export function requestMicPermission() {
+  const Ctor = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null
+  if (!Ctor) return
+  try {
+    const rec = new Ctor()
+    rec.lang = 'zh-TW'
+    rec.onerror = () => {}
+    rec.start()
+    setTimeout(() => { try { rec.abort() } catch { /* 已停 */ } }, 1500)
+  } catch { /* 不支援或被擋，忽略 */ }
+}
