@@ -8,7 +8,10 @@
     </label>
     <img v-if="photoUrl" :src="photoUrl" alt="你拍的成果" class="photo">
 
-    <template v-if="photoUrl || answered">
+    <p v-if="status === 'checking'" class="ask">AI 正在看你的成果⋯</p>
+    <p v-else-if="status === 'error'" class="ask">AI 暫時看不了，請自己選</p>
+
+    <template v-if="status === 'error'">
       <p class="ask">有做完嗎？</p>
       <div class="row">
         <button type="button" :class="{ on: done === true }" @click="done = true">做完了</button>
@@ -16,8 +19,10 @@
       </div>
     </template>
 
+    <p v-if="done === true && status === 'ok'" class="ask">✅ 都寫完了</p>
     <article v-if="done === false" class="help">
       <h4>沒做完，下次這樣進步</h4>
+      <p v-if="reason" class="reason">{{ reason }}</p>
       <ul>
         <li v-for="t in TIPS" :key="t">{{ t }}</li>
       </ul>
@@ -27,6 +32,7 @@
 
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue'
+import { checkTaskPhoto } from '../core/taskPhotoCheck.js'
 
 const props = defineProps({
   taskType: { type: String, default: 'homework' },
@@ -47,7 +53,8 @@ const TIPS = [
 
 const photoUrl = ref(null)
 const done = ref(null)
-const answered = computed(() => done.value !== null)
+const status = ref('idle') // idle | checking | ok | error
+const reason = ref('')
 
 // 照片只放在這一頁的記憶體（object URL），不存、不上傳，離開頁面就釋放。
 function onPhoto(ev) {
@@ -55,6 +62,21 @@ function onPhoto(ev) {
   if (!f) return
   if (photoUrl.value) URL.revokeObjectURL(photoUrl.value)
   photoUrl.value = URL.createObjectURL(f)
+  runCheck(f)
+}
+// 照片縮小後送到雲端 AI 判斷有沒有寫完（使用者要求；隱私說明頁已寫明）。
+async function runCheck(f) {
+  status.value = 'checking'
+  done.value = null
+  reason.value = ''
+  try {
+    const r = await checkTaskPhoto(f, goal.value)
+    done.value = r.finished === true
+    reason.value = r.finished ? '' : (r.reason ?? '')
+    status.value = 'ok'
+  } catch {
+    status.value = 'error'
+  }
 }
 onBeforeUnmount(() => { if (photoUrl.value) URL.revokeObjectURL(photoUrl.value) })
 </script>
