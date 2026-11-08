@@ -23,7 +23,7 @@
       <p v-if="historyError" class="hint warn">讀不到以前的紀錄</p>
     </header>
 
-    <TaskCheck :task-type="taskType" :task-label="taskLabel" :result="record?.result" />
+    <TaskCheck :task-type="taskType" :task-label="taskLabel" />
 
     <section v-if="improvements.length" class="improve">
       <h3>怎麼改進</h3>
