@@ -23,6 +23,8 @@
       <p v-if="historyError" class="hint warn">讀不到以前的紀錄</p>
     </header>
 
+    <TaskCheck :task-type="taskType" :task-label="taskLabel" />
+
     <section v-if="improvements.length" class="improve">
       <h3>怎麼改進</h3>
       <article v-for="it in improvements" :key="it.key">
@@ -83,6 +85,7 @@
 </template>
 
 <script setup>
+import TaskCheck from './TaskCheck.vue'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import {
   Chart, PieController, ArcElement, LineController, LineElement, PointElement,
@@ -114,6 +117,8 @@ const props = defineProps({
   // 複審第 1 輪 F1：跟 storageError 分開的獨立 prop，對應 session.js 的
   // state.historyError（listSessions() 失敗），講的是不同的事實。
   historyError: { type: String, default: null },
+  taskType: { type: String, default: 'homework' },
+  taskLabel: { type: String, default: '' },
 })
 defineEmits(['again', 'home'])
 

@@ -25,6 +25,8 @@
     :events="s.eventLog"
     :storage-error="s.storageError"
     :history-error="s.historyError"
+    :task-type="s.taskType"
+    :task-label="s.taskLabel"
     @again="onAgain"
     @home="onHome"
   />
