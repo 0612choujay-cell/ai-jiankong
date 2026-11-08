@@ -205,11 +205,20 @@
       </button>
       <ul v-if="logOpen" class="event-log-list">
         <li v-for="(e, i) in recentEvents" :key="i">
-          {{ e.at }} {{ EVENT_REASON_LABEL[e.reason] ?? e.reason }}
+          <button v-if="e.photo" type="button" class="log-photo" @click="viewEvent = e">
+            {{ e.at }} {{ EVENT_REASON_LABEL[e.reason] ?? e.reason }} 🔍
+          </button>
+          <template v-else>{{ e.at }} {{ EVENT_REASON_LABEL[e.reason] ?? e.reason }}</template>
         </li>
         <li v-if="!recentEvents.length">還沒有紀錄</li>
       </ul>
     </div>
+
+    <PhotoLightbox
+      v-if="viewEvent" :photo="viewEvent.photo"
+      :caption="`${viewEvent.at} ${EVENT_REASON_LABEL[viewEvent.reason] ?? viewEvent.reason}`"
+      @close="viewEvent = null"
+    />
 
     <div class="corner-tr">
       <StatusIndicator :items="statusItems" />
@@ -231,6 +240,7 @@ import {
   ref, reactive, computed, watch, onMounted, onBeforeUnmount,
 } from 'vue'
 import HpBar from './HpBar.vue'
+import PhotoLightbox from './PhotoLightbox.vue'
 import ChestZoomLayer from './ChestZoomLayer.vue'
 import BossSprite from './BossSprite.vue'
 import CoachBanner from './CoachBanner.vue'
@@ -261,6 +271,7 @@ defineEmits(['finish'])
 const session = useSession()
 const s = session.state
 const logOpen = ref(false)
+const viewEvent = ref(null)
 const eventCount = computed(() => (s.eventLog ?? []).length)
 const recentEvents = computed(() => (s.eventLog ?? []).slice(-8).reverse())
 const battle = computed(() => s.battle)
@@ -1287,6 +1298,7 @@ onBeforeUnmount(() => {
   75% { transform: translate(-4px, -3px); }
   100% { transform: translate(0, 0); }
 }
+.log-photo { background: none; border: 0; color: inherit; font: inherit; padding: 4px 0; cursor: zoom-in; }
 .event-log-list { margin: 4px 0 0; padding: 6px 10px; list-style: none; font-size: 14px;
   background: rgba(0, 0, 0, .6); color: #fff; border-radius: 8px; max-width: 70vw; }
 .mute { min-height: var(--tap-min); padding: 0 12px; font-size: var(--fs-body); }
