@@ -44,10 +44,9 @@ const TIPS = [
 ]
 
 const photoUrl = ref(null)
-// 只有「要寫字」的任務才需要拍照檢查：寫作業，或自己選且名稱像寫功課／考卷。
+// 只有「要寫字」的任務才需要拍照檢查：只有選「自己選」且名稱像寫功課／考卷。
 const WRITING = /寫|考卷|試卷|作業|功課|習作|練習|題|算|數學|作文|抄|填|homework|worksheet|exam|test/i
-const needsCheck = computed(() => props.taskType === 'homework'
-  || (props.taskType === 'custom' && WRITING.test(props.taskLabel)))
+const needsCheck = computed(() => props.taskType === 'custom' && WRITING.test(props.taskLabel))
 
 const done = ref(null)
 const status = ref('idle') // idle | checking | ok | error
