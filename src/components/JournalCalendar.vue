@@ -16,7 +16,6 @@
         @click="pick(key(d))"
       >
         <b>{{ d }}</b>
-        <img v-if="thumb(key(d))" :src="thumb(key(d))" alt="">
         <span v-for="e in (byDate[key(d)] ?? []).slice(0, 2)" :key="e.id" class="tag">{{ e.label }}</span>
         <i v-if="byDate[key(d)]?.length > 2">+{{ byDate[key(d)].length - 2 }}</i>
       </button>
@@ -30,7 +29,7 @@
       <p v-if="!(byDate[selected] ?? []).length" class="note">這天沒有紀錄</p>
       <button v-for="e in byDate[selected] ?? []" :key="e.id" type="button" class="item" @click="openEntry = e">
         <span class="what">{{ e.label }}</span>
-        <span class="when">{{ time(e.at) }}<template v-if="e.photo"> · 📷</template></span>
+        <span class="when">{{ time(e.at) }}</span>
       </button>
     </section>
 
@@ -95,7 +94,6 @@ const lead = computed(() => new Date(year.value, month.value, 1).getDay())
 const key = (d) => `${year.value}-${String(month.value + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 const time = (ms) => new Date(ms).toTimeString().slice(0, 5)
 
-const thumb = (k) => (byDate.value[k] ?? []).find((e) => e.photo)?.photo
 function pick(k) { selected.value = k; openEntry.value = null }
 function shift(delta) {
   const d = new Date(year.value, month.value + delta, 1)
@@ -124,7 +122,6 @@ watch(() => props.version, load)
 .wd { text-align: center; color: var(--c-text-dim); }
 .day { position: relative; aspect-ratio: 1; padding: 4px; border-radius: 10px; overflow: hidden; background: var(--c-surface); display: flex; flex-direction: column; align-items: flex-start; }
 .day b { position: relative; z-index: 1; }
-.day img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; }
 .day i { position: absolute; right: 4px; bottom: 2px; z-index: 1; font-style: normal; font-weight: 700; }
 .day.on { outline: 3px solid currentColor; }
 .note { text-align: center; color: var(--c-text-dim); }
