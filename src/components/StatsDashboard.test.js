@@ -178,7 +178,7 @@ describe('StatsDashboard：更正 2——不做「休息一下再來」，底部
   it('emit 只有 again/home，沒有 break', async () => {
     const { el, app } = mount({ record: baseRecord(), history: [], dpsSeries: [] })
     await nextTick()
-    const buttons = [...el.querySelectorAll('button')]
+    const buttons = [...el.querySelectorAll('.actions button')]
     expect(buttons.map((b) => b.textContent)).toEqual(['再討伐一次', '回主畫面'])
     app.unmount()
     el.remove()
@@ -197,7 +197,7 @@ describe('StatsDashboard：更正 2——不做「休息一下再來」，底部
     app.mount(el)
     await nextTick()
 
-    const [again, home] = [...el.querySelectorAll('button')]
+    const [again, home] = [...el.querySelectorAll('.actions button')]
     again.click()
     home.click()
 
@@ -221,7 +221,7 @@ describe('StatsDashboard：Task 20——長時段時第一顆按鈕改講「休�
     })
     await nextTick()
 
-    const buttons = [...el.querySelectorAll('button')]
+    const buttons = [...el.querySelectorAll('.actions button')]
     expect(buttons.map((b) => b.textContent)).toEqual(['休息一下再來', '回主畫面'])
     buttons[0].click()
     expect(againCalled, '仍然只 emit again，不新增第三種事件').toBe(1)

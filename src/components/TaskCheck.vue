@@ -10,7 +10,6 @@
 
     <p v-if="saved === 'ok'" class="ask">📅 已存進日曆</p>
     <p v-else-if="saved === 'error'" class="ask">沒存成功，請再拍一次</p>
-    <button v-if="saved === 'ok'" type="button" class="cal" @click="emit('calendar')">看日曆</button>
 
     <p v-if="status === 'checking'" class="ask">AI 正在看你的成果⋯</p>
     <p v-else-if="status === 'error'" class="ask">AI 暫時看不了，請再拍一次</p>
@@ -29,12 +28,12 @@
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { checkTaskPhoto, shrinkToJpeg } from '../core/taskPhotoCheck.js'
-import { saveEntry } from '../core/journalStore.js'
 
-const emit = defineEmits(['calendar'])
 const props = defineProps({
   taskType: { type: String, default: 'homework' },
   taskLabel: { type: String, default: '' },
+  // 儲存由結算頁負責（它握有整份結算內容）；這裡只回報照片與判斷結果。
+  onSave: { type: Function, default: null },
 })
 
 const NAMES = { homework: '寫作業', reading: '看書', vocab: '背單字', custom: '完成任務' }
@@ -69,13 +68,11 @@ function onPhoto(ev) {
 }
 
 // 存進日曆：照片縮小後連同日期、做了什麼，存在這台 iPad 的瀏覽器裡（使用者要求）。
-const entryId = `${Date.now()}`
-const entryAt = Date.now()
 const saved = ref('idle') // idle | ok | error
 let photoData = null
-function persist(finished) {
-  if (!photoData) return Promise.resolve()
-  return saveEntry({ id: entryId, at: entryAt, label: goal.value, photo: photoData, finished })
+function persist(finished, aiReason = '') {
+  if (!photoData || !props.onSave) return Promise.resolve()
+  return Promise.resolve(props.onSave({ photo: photoData, finished, aiReason }))
     .then(() => { saved.value = 'ok' })
     .catch(() => { saved.value = 'error' })
 }
@@ -95,7 +92,7 @@ async function runCheck(f) {
     done.value = r.finished === true
     reason.value = r.finished ? '' : (r.reason ?? '')
     status.value = 'ok'
-    persist(done.value)
+    persist(done.value, reason.value)
   } catch {
     status.value = 'error'
   }
@@ -110,7 +107,6 @@ onBeforeUnmount(() => { if (photoUrl.value) URL.revokeObjectURL(photoUrl.value) 
 .shoot { display: inline-block; min-height: var(--tap-min); line-height: var(--tap-min); padding: 0 24px; border-radius: 12px; background: var(--c-surface); border: 2px solid currentColor; cursor: pointer; }
 .shoot input { display: none; }
 .photo { display: block; max-width: 100%; max-height: 40vh; margin: 12px auto; border-radius: 8px; }
-.cal { min-height: var(--tap-min); padding: 0 20px; }
 .help { margin-top: 12px; text-align: left; }
 .help ul { margin: 0; padding-left: 1.2em; }
 </style>

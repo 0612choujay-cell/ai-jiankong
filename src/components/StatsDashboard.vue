@@ -23,7 +23,7 @@
       <p v-if="historyError" class="hint warn">讀不到以前的紀錄</p>
     </header>
 
-    <TaskCheck :task-type="taskType" :task-label="taskLabel" @calendar="$emit('calendar')" />
+    <TaskCheck :task-type="taskType" :task-label="taskLabel" :on-save="savePhoto" />
 
     <section v-if="improvements.length" class="improve">
       <h3>怎麼改進</h3>
@@ -72,6 +72,8 @@
       </tbody>
     </table>
 
+    <JournalCalendar embedded :version="journalVersion" />
+
     <footer class="actions">
       <!-- Task 20：本輪坐了 ≥20 分鐘時，同一顆按鈕改講「休息一下再來」——
            仍然只有兩顆按鈕、仍然只 emit again（Task 18 更正 2 的決定：底部
@@ -86,6 +88,8 @@
 
 <script setup>
 import TaskCheck from './TaskCheck.vue'
+import JournalCalendar from './JournalCalendar.vue'
+import { saveEntry } from '../core/journalStore.js'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import {
   Chart, PieController, ArcElement, LineController, LineElement, PointElement,
@@ -120,7 +124,39 @@ const props = defineProps({
   taskType: { type: String, default: 'homework' },
   taskLabel: { type: String, default: '' },
 })
-defineEmits(['again', 'home', 'calendar'])
+defineEmits(['again', 'home'])
+
+// ── 日曆日記：每一場結束都存一筆（不論選哪種任務），內容就是這個結算頁顯示的東西。
+// 拍了成果照就補上照片與 AI 判斷。只存在這台 iPad（journalStore.js），展示模式不存。
+const TASK_NAME = { homework: '寫作業', reading: '看書', vocab: '背單字' }
+const journalVersion = ref(0)
+const entryAt = Date.now()
+const entryId = `${entryAt}`
+const extra = { photo: null, finished: null, aiReason: '' }
+function entrySnapshot() {
+  const r = props.record
+  return {
+    id: entryId,
+    at: entryAt,
+    taskType: props.taskType,
+    label: (props.taskType === 'custom' ? props.taskLabel : TASK_NAME[props.taskType]) || '專注',
+    resultText: r?.result === 'victory' ? '討伐成功！' : `打掉了 ${knockedPct.value}%`,
+    headline: summary.value.headline,
+    nextGoal: summary.value.nextGoal,
+    improvements: improvements.value.map((it) => ({ label: it.label, count: it.count ?? 0, why: it.why, tips: [...it.tips] })),
+    events: props.events.map(describe),
+    axes: axes.value.map((a) => ({ label: a.label, value: a.value })),
+    ...extra,
+  }
+}
+function persistEntry() {
+  if (!props.record || props.record.demoMode) return Promise.resolve()
+  return saveEntry(entrySnapshot()).then(() => { journalVersion.value += 1 })
+}
+function savePhoto(info) {
+  Object.assign(extra, info)
+  return persistEntry()
+}
 
 const pieEl = ref(null)
 const lineEl = ref(null)
@@ -151,6 +187,7 @@ const phoneMinutes = computed(() => (phoneMs.value > 0 ? Math.max(1, Math.round(
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 
 onMounted(() => {
+  persistEntry().catch(() => {})
   const p = props.record?.postureDurationMs ?? {}
   const d = props.record?.distractionDurationMs ?? {}
 
