@@ -95,7 +95,7 @@ defineProps({
 .boss-sprite {
   position: relative;
   z-index: 1; /* 場景(0) < 魔王(1) < 戰場帶(2) < 角落(3) < boss-hud(4) */
-  width: clamp(200px, 46vmin, 420px);
+  width: clamp(260px, 62vmin, 560px);
   aspect-ratio: 1 / 1;
 
   /* 「後仰」的方向跟著版面走，跟 layout.css 的 --attack-dx/--attack-dy
