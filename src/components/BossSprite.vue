@@ -95,7 +95,7 @@ defineProps({
 .boss-sprite {
   position: relative;
   z-index: 1; /* 場景(0) < 魔王(1) < 戰場帶(2) < 角落(3) < boss-hud(4) */
-  width: clamp(140px, 30vmin, 280px);
+  width: clamp(200px, 46vmin, 420px);
   aspect-ratio: 1 / 1;
 
   /* 「後仰」的方向跟著版面走，跟 layout.css 的 --attack-dx/--attack-dy
@@ -186,7 +186,7 @@ defineProps({
 .boss-sprite.struck .hit { animation: boss-hit .3s ease-out; }
 @keyframes boss-hit {
   0%   { transform: translate(0, 0) scale(1) rotate(0deg); }
-  30%  { transform: translate(var(--recoil-x), var(--recoil-y)) scale(0.88) rotate(var(--recoil-rot)); }
+  30%  { transform: translate(calc(var(--recoil-x) * 1.8), calc(var(--recoil-y) * 1.8)) scale(0.8) rotate(calc(var(--recoil-rot) * 1.6)); }
   60%  { transform: translate(calc(var(--recoil-x) * -0.25), calc(var(--recoil-y) * -0.25)) scale(1.05) rotate(0deg); }
   100% { transform: translate(0, 0) scale(1) rotate(0deg); }
 }
@@ -203,11 +203,12 @@ defineProps({
 .boss-img, .hit-flash { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; user-select: none; pointer-events: none; }
 
 /* --- 被打閃光：同一張圖加上靜態亮度濾鏡，只播 opacity。 --- */
-.hit-flash { opacity: 0; filter: brightness(4) saturate(0.4); }
+.hit-flash { opacity: 0; filter: sepia(1) saturate(9) hue-rotate(-52deg) brightness(1.6); }
 .boss-sprite.struck .hit-flash { animation: boss-hit-flash .3s ease-out; }
 @keyframes boss-hit-flash {
   0%   { opacity: 0; }
-  25%  { opacity: .7; }
+  20%  { opacity: .95; }
+  60%  { opacity: .6; }
   100% { opacity: 0; }
 }
 
