@@ -1,5 +1,12 @@
 <template>
   <div class="stack">
+    <section v-if="lastTips.length" class="remind" aria-live="polite">
+      <h3>上次要多注意</h3>
+      <ul>
+        <li v-for="t in lastTips" :key="t.label"><b>{{ t.label }}</b>：{{ t.tip }}</li>
+      </ul>
+    </section>
+
     <h2>這次要做什麼？</h2>
 
     <div class="tasks" role="radiogroup" aria-label="任務類型">
@@ -87,7 +94,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { listEntries } from '../core/journalStore.js'
 import {
   DURATION_PRESETS, DURATION_MIN_MIN, DURATION_MAX_MIN, DEFAULT_DURATION_MIN, bossHpFor,
 } from '../core/battleConfig.js'
@@ -106,6 +114,18 @@ const taskType = ref('homework')
 const durationMin = ref(DEFAULT_DURATION_MIN)
 const customLabel = ref('')
 
+// 開始前提醒：有上一場的紀錄（第二次以後）就把上次沒做好的地方講一次；
+// 第一次用、或上次沒有問題，就什麼都不顯示。資料來自日曆日記（只在這台 iPad）。
+const lastTips = ref([])
+onMounted(async () => {
+  try {
+    const rows = await listEntries()
+    const last = [...rows].reverse().find((e) => Array.isArray(e.improvements))
+    lastTips.value = (last?.improvements ?? []).slice(0, 3)
+      .map((it) => ({ label: it.label, tip: it.tips?.[0] ?? it.why ?? '' }))
+  } catch { /* 讀不到就不提醒 */ }
+})
+
 // 魔王血量永遠用一般模式（非展示）算給使用者看：展示模式血量是固定的
 // DEMO.bossHp、跟這裡調的時長無關，顯示一般模式的數字才有參考意義。
 const bossHp = computed(() => bossHpFor(durationMin.value * 60_000, false))
@@ -123,6 +143,9 @@ function emitStart(demoMode) {
 </script>
 
 <style scoped>
+.remind { max-width: 36em; padding: 12px 16px; background: var(--c-surface); border-radius: 12px; }
+.remind h3 { margin: 0 0 6px; }
+.remind ul { margin: 0; padding-left: 1.2em; }
 h2 { font-size: var(--fs-title); margin: 0; }
 .tasks, .presets { display: flex; gap: var(--gap); flex-wrap: wrap; justify-content: center; }
 .task {
