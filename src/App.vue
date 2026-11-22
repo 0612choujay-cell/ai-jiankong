@@ -1,6 +1,8 @@
 <template>
   <video ref="videoEl" class="hidden-cam" playsinline muted />
 
+  <JournalCalendar v-if="calendarOpen" @close="calendarOpen = false" />
+
   <PrivacyNotice
     v-if="s.screen === 'privacy'"
     @agree="session.enterPermission()"
@@ -15,6 +17,7 @@
   <TaskSelector
     v-else-if="s.screen === 'task'"
     @start="onTaskChosen"
+    @calendar="calendarOpen = true"
   />
 
   <StatsDashboard
@@ -29,6 +32,7 @@
     :task-label="s.taskLabel"
     @again="onAgain"
     @home="onHome"
+    @calendar="calendarOpen = true"
   />
 
   <BreakScreen v-else-if="s.screen === 'break'" @done="onBreakDone" />
@@ -308,6 +312,7 @@
 </template>
 
 <script setup>
+import JournalCalendar from './components/JournalCalendar.vue'
 import { ref, onBeforeUnmount } from 'vue'
 import PrivacyNotice from './components/PrivacyNotice.vue'
 import PermissionGate from './components/PermissionGate.vue'
@@ -411,6 +416,7 @@ function onHome() {
 const STAFF_TAP_COUNT = 5
 const STAFF_TAP_WINDOW_MS = 600
 const settingsOpen = ref(false)
+const calendarOpen = ref(false)
 const confirmNewVisitor = ref(false)
 let staffTaps = 0
 let staffTapTimer = 0

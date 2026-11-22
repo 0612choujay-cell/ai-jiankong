@@ -217,8 +217,10 @@ describe("I-9：App.vue 的 'task' 分支不得長出第二個出口（結構護
     // 這個元素上的每一個 @xxx 綁定都必須在這份白名單裡。新增一個出口
     // （例如 @skip="session.startBattle()"）會讓清單對不上，當場紅。
     const handlers = [...tag[0].matchAll(/@([a-zA-Z-]+)=/g)].map((m) => m[1])
-    expect(handlers, "'task' 畫面的出口是被有意識核准過的，不是想加就加").toEqual(['start'])
+    // 'calendar' 只是打開日曆覆蓋層（calendarOpen = true），不是離開任務畫面的出口。
+    expect(handlers, "'task' 畫面的出口是被有意識核准過的，不是想加就加").toEqual(['start', 'calendar'])
     expect(tag[0]).toContain('onTaskChosen')
+    expect(tag[0]).toContain('@calendar="calendarOpen = true"')
   })
 
   it('onTaskChosen() 先清掉上一位的基準再開打，不再經過校準畫面', () => {

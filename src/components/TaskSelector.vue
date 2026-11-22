@@ -43,6 +43,8 @@
 
     <p class="boss-hp">魔王血量 {{ bossHp }}</p>
 
+    <button type="button" class="calendar-btn" @click="emit('calendar')">📅 日曆</button>
+
     <!--
       按鈕文字從「開始討伐」改成「準備開始」（【分任務校準】的必然後果）。
 
@@ -90,7 +92,7 @@ import {
   DURATION_PRESETS, DURATION_MIN_MIN, DURATION_MAX_MIN, DEFAULT_DURATION_MIN, bossHpFor,
 } from '../core/battleConfig.js'
 
-const emit = defineEmits(['start'])
+const emit = defineEmits(['start', 'calendar'])
 
 const TASKS = [
   { value: 'homework', label: '寫作業', emoji: '✏️' },

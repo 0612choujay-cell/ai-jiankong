@@ -23,7 +23,7 @@
       <p v-if="historyError" class="hint warn">讀不到以前的紀錄</p>
     </header>
 
-    <TaskCheck :task-type="taskType" :task-label="taskLabel" />
+    <TaskCheck :task-type="taskType" :task-label="taskLabel" @calendar="$emit('calendar')" />
 
     <section v-if="improvements.length" class="improve">
       <h3>怎麼改進</h3>
@@ -120,7 +120,7 @@ const props = defineProps({
   taskType: { type: String, default: 'homework' },
   taskLabel: { type: String, default: '' },
 })
-defineEmits(['again', 'home'])
+defineEmits(['again', 'home', 'calendar'])
 
 const pieEl = ref(null)
 const lineEl = ref(null)

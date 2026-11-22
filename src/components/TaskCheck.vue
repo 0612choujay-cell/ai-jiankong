@@ -8,6 +8,10 @@
     </label>
     <img v-if="photoUrl" :src="photoUrl" alt="你拍的成果" class="photo">
 
+    <p v-if="saved === 'ok'" class="ask">📅 已存進日曆</p>
+    <p v-else-if="saved === 'error'" class="ask">沒存成功，請再拍一次</p>
+    <button v-if="saved === 'ok'" type="button" class="cal" @click="emit('calendar')">看日曆</button>
+
     <p v-if="status === 'checking'" class="ask">AI 正在看你的成果⋯</p>
     <p v-else-if="status === 'error'" class="ask">AI 暫時看不了，請再拍一次</p>
 
@@ -24,8 +28,10 @@
 
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue'
-import { checkTaskPhoto } from '../core/taskPhotoCheck.js'
+import { checkTaskPhoto, shrinkToJpeg } from '../core/taskPhotoCheck.js'
+import { saveEntry } from '../core/journalStore.js'
 
+const emit = defineEmits(['calendar'])
 const props = defineProps({
   taskType: { type: String, default: 'homework' },
   taskLabel: { type: String, default: '' },
@@ -44,9 +50,10 @@ const TIPS = [
 ]
 
 const photoUrl = ref(null)
-// 只有「要寫字」的任務才需要拍照檢查：只有選「自己選」且名稱像寫功課／考卷。
+// 只有選「自己選」並打了名稱才會請你拍照存進日曆；名稱像寫功課／考卷時，還會請 AI 判斷有沒有寫完。
 const WRITING = /寫|考卷|試卷|作業|功課|習作|練習|題|算|數學|作文|抄|填|homework|worksheet|exam|test/i
-const needsCheck = computed(() => props.taskType === 'custom' && WRITING.test(props.taskLabel))
+const needsCheck = computed(() => props.taskType === 'custom' && props.taskLabel.trim() !== '')
+const isWriting = computed(() => WRITING.test(props.taskLabel))
 
 const done = ref(null)
 const status = ref('idle') // idle | checking | ok | error
@@ -58,7 +65,25 @@ function onPhoto(ev) {
   if (!f) return
   if (photoUrl.value) URL.revokeObjectURL(photoUrl.value)
   photoUrl.value = URL.createObjectURL(f)
-  runCheck(f)
+  saveToJournal(f)
+}
+
+// 存進日曆：照片縮小後連同日期、做了什麼，存在這台 iPad 的瀏覽器裡（使用者要求）。
+const entryId = `${Date.now()}`
+const entryAt = Date.now()
+const saved = ref('idle') // idle | ok | error
+let photoData = null
+function persist(finished) {
+  if (!photoData) return Promise.resolve()
+  return saveEntry({ id: entryId, at: entryAt, label: goal.value, photo: photoData, finished })
+    .then(() => { saved.value = 'ok' })
+    .catch(() => { saved.value = 'error' })
+}
+async function saveToJournal(f) {
+  saved.value = 'idle'
+  try { photoData = await shrinkToJpeg(f) } catch { saved.value = 'error'; return }
+  await persist(null)
+  if (isWriting.value) runCheck(f)
 }
 // 照片縮小後送到雲端 AI 判斷有沒有寫完（使用者要求；隱私說明頁已寫明）。
 async function runCheck(f) {
@@ -70,6 +95,7 @@ async function runCheck(f) {
     done.value = r.finished === true
     reason.value = r.finished ? '' : (r.reason ?? '')
     status.value = 'ok'
+    persist(done.value)
   } catch {
     status.value = 'error'
   }
@@ -84,6 +110,7 @@ onBeforeUnmount(() => { if (photoUrl.value) URL.revokeObjectURL(photoUrl.value) 
 .shoot { display: inline-block; min-height: var(--tap-min); line-height: var(--tap-min); padding: 0 24px; border-radius: 12px; background: var(--c-surface); border: 2px solid currentColor; cursor: pointer; }
 .shoot input { display: none; }
 .photo { display: block; max-width: 100%; max-height: 40vh; margin: 12px auto; border-radius: 8px; }
+.cal { min-height: var(--tap-min); padding: 0 20px; }
 .help { margin-top: 12px; text-align: left; }
 .help ul { margin: 0; padding-left: 1.2em; }
 </style>
