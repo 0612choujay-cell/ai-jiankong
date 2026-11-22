@@ -11,112 +11,18 @@
          「蓄力中被打」的合成 keyframes。 -->
     <div class="stance">
       <div class="hit">
-        <svg class="boss-svg" viewBox="0 0 200 200">
-          <!-- 影子：靜態，不隨漂浮變形（會動的影子要多一組動畫，不值得） -->
-          <ellipse class="ink" cx="100" cy="186" rx="50" ry="8" />
-
-          <!-- 先畫會被身體蓋住的部件（角、手臂、腿），再畫身體，肩／髖點
-               刻意落在身體圓形內側，讓四肢視覺上「從身體裡長出來」，末端
-               （手、腳）落在身體圓外，這樣才看得出這是一個有四肢的全身，
-               不是一顆掛了裝飾的頭。手臂／腿用 stroke 畫（粗圓頭線段），
-               不用一堆填色多邊形拼——形狀好調、粗細好調，而且跟 .hit-flash
-               共用同一組座標時只需要複製 <path> 的 d，不必再對齊填色範圍。 -->
-          <g class="horn">
-            <path d="M64 60C56 40 58 28 72 22C76 38 82 50 90 58Z" />
-            <path d="M136 60C144 40 142 28 128 22C124 38 118 50 110 58Z" />
-          </g>
-          <g class="limbs">
-            <!-- 手臂：transform-origin 對齊肩點（身體圓內側），出手攻擊時
-                 整個 <g>（線段＋手掌）繞著肩點旋轉，手掌才不會脫離手臂。 -->
-            <g class="arm arm-l">
-              <path d="M48 108Q22 122 18 148" />
-              <circle class="hand" cx="18" cy="148" r="13" />
-            </g>
-            <g class="arm arm-r">
-              <path d="M152 108Q178 122 182 148" />
-              <circle class="hand" cx="182" cy="148" r="13" />
-            </g>
-            <!-- 腿：目前不參與任何動畫（待機／蓄力／攻擊都只動 .stance／
-                 手臂），純造型用途——但一樣拆成 <g> 而不是散落的 ellipse，
-                 保留未來要單獨動它的餘地，不必回頭重畫。 -->
-            <g class="leg leg-l">
-              <path d="M82 158Q70 176 66 192" />
-              <ellipse class="foot" cx="64" cy="194" rx="16" ry="9" />
-            </g>
-            <g class="leg leg-r">
-              <path d="M118 158Q130 176 134 192" />
-              <ellipse class="foot" cx="136" cy="194" rx="16" ry="9" />
-            </g>
-          </g>
-          <g class="skin">
-            <circle cx="100" cy="112" r="62" />
-          </g>
-
-          <!-- 肚子與腮紅：用 --c-text／--c-danger 加低不透明度做出深淺，
-               不自己發明第二組色碼（tokens.css 沒有「魔王亮部／暗部」色）。 -->
-          <ellipse class="belly" cx="100" cy="132" rx="38" ry="30" />
-          <ellipse class="blush" cx="54" cy="128" rx="10" ry="6" />
-          <ellipse class="blush" cx="146" cy="128" rx="10" ry="6" />
-
-          <!-- 眼睛：睜眼（待機／蓄力／攻擊）與瞇眼（被打）兩組，用 opacity 互換。
-               大眼睛、高光在上方＝Q 版，不是恐怖。 -->
-          <g class="eyes-open">
-            <ellipse class="sclera" cx="78" cy="100" rx="18" ry="20" />
-            <ellipse class="sclera" cx="122" cy="100" rx="18" ry="20" />
-            <circle class="pupil" cx="80" cy="104" r="8.5" />
-            <circle class="pupil" cx="124" cy="104" r="8.5" />
-            <circle class="glint" cx="75" cy="97" r="3.6" />
-            <circle class="glint" cx="119" cy="97" r="3.6" />
-          </g>
-          <g class="eyes-shut">
-            <path d="M66 104Q78 90 90 104" />
-            <path d="M110 104Q122 90 134 104" />
-          </g>
-
-          <!-- 眉毛：蓄力／攻擊／大招／第二形態才出現，把「他認真了」畫在臉上。
-               是「認真起來」的眉，不是兇惡的眉——線很短、角度很淺。 -->
-          <g class="brows">
-            <path d="M62 76L88 84" />
-            <path d="M138 76L112 84" />
-          </g>
-
-          <!-- 三種嘴形，一次只有一個 opacity:1 -->
-          <path class="mouth-idle" d="M84 140Q100 154 116 140" />
-          <ellipse class="mouth-ouch" cx="100" cy="144" rx="9" ry="7" />
-          <g class="mouth-roar">
-            <path class="maw" d="M78 136Q100 130 122 136Q118 162 100 162Q82 162 78 136Z" />
-            <path class="tooth" d="M87 135L93 135L90 142Z" />
-            <path class="tooth" d="M107 135L113 135L110 142Z" />
-            <ellipse class="tongue" cx="100" cy="156" rx="9" ry="6" />
-          </g>
-
-          <!-- 打擊閃光：被打瞬間整輪廓（角＋身體＋四肢）疊一層淡色，0→0.7→0，
-               純 opacity，不是重畫一次「白色版魔王」的 filter。座標直接複製
-               上面 horn／skin／limbs 的 d／cx／cy——同一份幾何，兩種畫法
-               （填色 vs 描邊），這樣才會跟本體完全對齊，不必另外量一次。
-               眼睛／嘴巴刻意不複製進來：閃光只蓋輪廓，臉部表情（瞇眼、
-               張嘴）本來就已經在做「被打」的表情切換，兩者疊加才看得出
-               「這一下真的很痛」而不是全身變成一塊色板。 -->
-          <g class="hit-flash">
-            <g class="hit-flash-fill">
-              <path d="M64 60C56 40 58 28 72 22C76 38 82 50 90 58Z" />
-              <path d="M136 60C144 40 142 28 128 22C124 38 118 50 110 58Z" />
-              <circle cx="100" cy="112" r="62" />
-            </g>
-            <g class="hit-flash-stroke">
-              <path d="M48 108Q22 122 18 148" />
-              <path d="M152 108Q178 122 182 148" />
-              <path d="M82 158Q70 176 66 192" />
-              <path d="M118 158Q130 176 134 192" />
-            </g>
-          </g>
-        </svg>
+        <div class="breath">
+          <img class="boss-img" :src="bossUrl" alt="" draggable="false">
+          <!-- 被打閃光：同一張圖疊一層，純 opacity 播放（見 .hit-flash） -->
+          <img class="hit-flash" :src="bossUrl" alt="" draggable="false">
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import bossUrl from '../assets/boss.webp'
 /**
  * Q 版分心大魔王。
  *
@@ -128,7 +34,8 @@
  * 上既有的那幾個 class／prop 綁的是同一組 ref，是同一套狀態機的出口，不是
  * 第二套。
  *
- * 整張圖是 inline SVG：這個 App 是離線展場裝置，CSP 的 connect-src 只允許
+ * 魔王是一張打包進 /assets 的圖片（src/assets/boss.webp，由 Vite 帶 hash 輸出、
+ * service worker 以 cache-first 快取），不是外部圖檔：這個 App 是離線展場裝置，CSP 的 connect-src 只允許
  * 同源，任何 CDN 或外部圖檔都會被靜默擋掉（沒有錯誤訊息、只有一塊空白）。
  */
 defineProps({
@@ -208,7 +115,6 @@ defineProps({
 }
 
 .stance, .hit { width: 100%; height: 100%; }
-.boss-svg { display: block; width: 100%; height: 100%; }
 
 /* --- 待機：很省的呼吸／漂浮。3.6s 一個循環、位移 2.5%、放大 1.5%，
        只有一個合成層在動，看得出「他是活的」但不會吸走注意力。 --- */
@@ -247,19 +153,6 @@ defineProps({
   65%  { transform: translate(calc(var(--recoil-x) * -0.6), calc(var(--recoil-y) * -0.6)) scale(1.08); }
   100% { transform: translate(0, 0) scale(1); }
 }
-/* 手臂出拳：跟 boss-attack 同時間、同長度播，但獨立一組 keyframes——身體
-   撲、手臂揮是兩層疊加的動作，不是同一組 transform 拆開寫。兩隻手臂同方向
-   旋轉（不分英雄在左在右）：這是「雙手前撲」的日常小動作，不是必須指向
-   英雄方向的大招衝刺，用同一組角度更省事、也更好認。 */
-.boss-sprite.attacking .arm-l,
-.boss-sprite.attacking .arm-r { animation: boss-attack-arm .42s ease-out; }
-@keyframes boss-attack-arm {
-  0%   { transform: rotate(0deg); }
-  35%  { transform: rotate(-18deg); }
-  65%  { transform: rotate(28deg); }
-  100% { transform: rotate(0deg); }
-}
-
 /* 蓄力中同時被姿態扣血（陷阱待確認期間本來就可能發生——物品判斷跟姿態
    判斷是兩條互不影響的規則，小孩完全可能一邊駝背一邊被判定拿著手機）：
    身體的蹲低動作維持蓄力那一版，不被攻擊動作蓋掉——蓄力是持續 20 秒的
@@ -298,10 +191,19 @@ defineProps({
   100% { transform: translate(0, 0) scale(1) rotate(0deg); }
 }
 
-/* --- 打擊閃光：跟 boss-hit 同時播、同樣 0.3s，純 opacity，見 template
-       裡 .hit-flash 那段註解為什麼複製座標而不是共用 <use>（jsdom 測不到
-       <use> 的 shadow tree，真機上 class 選擇器還會穿透進去蓋掉這裡想要
-       的顏色，兩個理由都指向「直接複製幾何」比較穩）。 --- */
+/* --- 呼吸：身體沿著腳底一起一伏（吸氣＝微微拉高、變寬一點，吐氣＝回落）。
+       只用 transform，transform-origin 在底部中央，所以「站在地上」的腳不會
+       飄，是上半身在升降。3.6s 一個循環，比待機漂浮慢一點、幅度大一點
+       （scaleY 1→1.045），看得出在呼吸又不會吵。 --- */
+.breath { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; animation: boss-breath 3.6s ease-in-out infinite; will-change: transform; }
+@keyframes boss-breath {
+  0%, 100% { transform: scale(1, 1); }
+  50%      { transform: scale(1.015, 1.045); }
+}
+.boss-img, .hit-flash { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; user-select: none; pointer-events: none; }
+
+/* --- 被打閃光：同一張圖加上靜態亮度濾鏡，只播 opacity。 --- */
+.hit-flash { opacity: 0; filter: brightness(4) saturate(0.4); }
 .boss-sprite.struck .hit-flash { animation: boss-hit-flash .3s ease-out; }
 @keyframes boss-hit-flash {
   0%   { opacity: 0; }
@@ -309,82 +211,9 @@ defineProps({
   100% { opacity: 0; }
 }
 
-/* --- 造型（顏色全部來自 tokens.css，沒有任何自己發明的色碼） --- */
-.skin circle { fill: var(--c-boss); }
-.horn path { fill: var(--c-warn); }
-.ink { fill: var(--c-bg); opacity: .45; }
-.belly { fill: var(--c-text); opacity: .16; }
-.blush { fill: var(--c-danger); opacity: .45; }
-.sclera { fill: var(--c-text); }
-.pupil { fill: var(--c-bg); }
-.glint { fill: var(--c-text); }
-.eyes-shut path, .brows path {
-  fill: none; stroke: var(--c-bg); stroke-width: 6; stroke-linecap: round;
-}
-.mouth-idle { fill: none; stroke: var(--c-bg); stroke-width: 6; stroke-linecap: round; }
-.mouth-ouch, .maw { fill: var(--c-bg); }
-.tooth { fill: var(--c-text); }
-.tongue { fill: var(--c-danger); }
-
-/* 四肢：stroke 畫的粗圓頭線段，手掌／腳掌是實心圓／橢圓蓋在線段末端。
-   transform-origin 對齊肩點（跟 template 裡的路徑起點座標一致），出手
-   攻擊時整個 <g> 繞著這個點轉，線段與手掌才會一起動、不脫節。
-   顯式寫 transform-box: view-box：不同瀏覽器對 SVG 子元素沒設它時的預設
-   參考框歷史上不一致（fill-box vs view-box），這裡不賭預設值，直接指定
-   成跟 viewBox 座標系一致，數字才會跟上面的座標算式對得上。 */
-.arm path, .leg path { fill: none; stroke: var(--c-boss); stroke-width: 20; stroke-linecap: round; }
-.leg path { stroke-width: 24; }
-.hand, .foot { fill: var(--c-boss); }
-.arm-l { transform-box: view-box; transform-origin: 48px 108px; }
-.arm-r { transform-box: view-box; transform-origin: 152px 108px; }
-
-/* --- 表情切換：純 opacity，不是動畫。
-       這是「狀態一眼分得出來」真正的主力——位移看得到但記不住，
-       臉才記得住。也因為是 opacity 不是 animation，reduced-motion 下
-       完全照常生效（見下面的 reduce 區塊）。 --- */
-.eyes-open { opacity: 1; }
-.eyes-shut, .brows, .mouth-ouch, .mouth-roar { opacity: 0; }
-.mouth-idle { opacity: 1; }
-.hit-flash { opacity: 0; }
-.hit-flash-fill { fill: var(--c-text); }
-.hit-flash-stroke { fill: none; stroke: var(--c-text); stroke-width: 22; stroke-linecap: round; }
-
-/* --- 第二（含以上）形態：只換臉／角，不換身形（理由見上面尺寸那段
-       註解）。角變大用 transform: scale() 而不是重畫路徑，transform-origin
-       對齊每隻角自己在身體上的接點，往外變大、不平移整隻角的位置。
-       這個區塊必須放在 charging／attacking／ultimate／struck 的表情規則
-       **之前**：那幾個狀態各自對 .brows 有自己的 opacity 規則，同一個
-       選擇器特異度下靠原始碼順序決定誰贏，被打瞬間必須恢復成瞇眼、
-       眉毛收起，不能被 phase2 的「眉毛常駐」蓋過去。 --- */
-.boss-sprite.phase2 .horn path:first-child { transform: scale(1.18); transform-origin: 70px 58px; }
-.boss-sprite.phase2 .horn path:last-child { transform: scale(1.18); transform-origin: 130px 58px; }
-.boss-sprite.phase2 .brows { opacity: 1; }
-.boss-sprite.phase2 .blush { opacity: .75; }
-
-.boss-sprite.charging .brows { opacity: 1; }
-.boss-sprite.charging .mouth-idle { opacity: 0; }
-.boss-sprite.charging .mouth-roar { opacity: 1; }
-
-.boss-sprite.attacking .brows { opacity: 1; }
-.boss-sprite.attacking .mouth-idle { opacity: 0; }
-.boss-sprite.attacking .mouth-roar { opacity: 1; }
-
-/* 大招沿用蓄力那張臉（眉＋張嘴）：造型不必再多一種，動作幅度已經把
-   「這次不一樣」講完了。臉是 opacity 切的，reduced 模式下照常生效——
-   那正是 reduced 下大招唯一來自魔王本體的回饋。 */
-.boss-sprite.ultimate .brows { opacity: 1; }
-.boss-sprite.ultimate .mouth-idle { opacity: 0; }
-.boss-sprite.ultimate .mouth-roar { opacity: 1; }
-
-/* struck 的規則放在 charging／attacking／ultimate／phase2 之後：這幾個都
-   可能同時成立（例如蓄力中被打中、或第二形態被打中），這時要顯示的是
-   「被打」那張臉，後面的規則勝出。 */
-.boss-sprite.struck .eyes-open { opacity: 0; }
-.boss-sprite.struck .eyes-shut { opacity: 1; }
-.boss-sprite.struck .brows { opacity: 0; }
-.boss-sprite.struck .mouth-idle,
-.boss-sprite.struck .mouth-roar { opacity: 0; }
-.boss-sprite.struck .mouth-ouch { opacity: 1; }
+/* 蓄力／大招／第二形態：圖片沒有可切換的表情，用靜態的色調暗示。 */
+.boss-sprite.charging .boss-img, .boss-sprite.ultimate .boss-img, .boss-sprite.attacking .boss-img { filter: saturate(1.5) brightness(1.15); }
+.boss-sprite.phase2 .boss-img { filter: saturate(1.3) hue-rotate(-25deg); }
 
 /* --- prefers-reduced-motion ---
    base.css 已經有一條全域規則把所有 animation-duration 壓成 .001ms，
@@ -407,8 +236,7 @@ defineProps({
   .boss-sprite.charging.attacking .stance,
   .boss-sprite.ultimate .stance,
   .boss-sprite.struck .hit,
-  .boss-sprite.attacking .arm-l,
-  .boss-sprite.attacking .arm-r,
+  .breath,
   .boss-sprite.struck .hit-flash { animation: none; }
   .boss-sprite.charging .stance { transform: scale(1.06); }
 }

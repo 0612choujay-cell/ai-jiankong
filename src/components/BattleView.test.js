@@ -1283,14 +1283,14 @@ describe('Important 2（版面／可及性複審）：boss-hud 的 z-index 明�
 // ---------------------------------------------------------------------------
 
 describe('BattleView：魔王造型接線（沿用既有的 bossStruck / hasPendingTrap，不另起一套狀態機）', () => {
-  it('魔王已經是 BossSprite（inline SVG），不再是那個 emoji，而且維持 aria-hidden', async () => {
+  it('魔王已經是 BossSprite（魔王圖片），不再是那個 emoji，而且維持 aria-hidden', async () => {
     const { el, app } = mount()
     await nextTick()
 
     const sprite = el.querySelector('.arena__boss .boss-sprite')
     expect(sprite, '魔王側必須有 BossSprite').not.toBeNull()
     expect(sprite.getAttribute('aria-hidden')).toBe('true')
-    expect(sprite.querySelector('svg'), '造型必須是 inline SVG').not.toBeNull()
+    expect(sprite.querySelector('img.boss-img'), '造型必須是魔王圖片').not.toBeNull()
     expect(el.textContent, '不該再有 emoji 版魔王').not.toContain('👹')
 
     app.unmount()

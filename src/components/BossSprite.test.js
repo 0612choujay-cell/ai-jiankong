@@ -203,31 +203,13 @@ describe('BossSprite：四種狀態的 class（真相來源是 BattleView 的 bo
     el.remove()
   })
 
-  it('造型是 inline SVG，而且是真的畫了東西（不是一個空的 <svg>）', async () => {
+  it('造型是一張魔王圖片（打包進 /assets 的同源檔案），而且有呼吸的外層', async () => {
     const { el, app } = mount({ struck: false, charging: false })
     await nextTick()
 
-    const svg = el.querySelector('.boss-sprite svg')
-    expect(svg).not.toBeNull()
-    expect(svg.querySelectorAll('circle, ellipse, path').length).toBeGreaterThan(10)
-
-    app.unmount()
-    el.remove()
-  })
-})
-
-describe('BossSprite：全身四肢（手腳都要有，不是只有一顆頭）', () => {
-  it('有兩隻手臂（含手掌）與兩條腿（含腳掌），每隻手臂是可獨立變形的 <g>', async () => {
-    const { el, app } = mount()
-    await nextTick()
-
-    const svg = el.querySelector('.boss-sprite svg')
-    expect(svg.querySelectorAll('.arm').length, '要有左右兩隻手臂').toBe(2)
-    expect(svg.querySelectorAll('.leg').length, '要有左右兩條腿').toBe(2)
-    expect(svg.querySelectorAll('.hand').length, '手臂末端要有手掌').toBe(2)
-    expect(svg.querySelectorAll('.foot').length, '腿末端要有腳掌').toBe(2)
-    expect(svg.querySelector('.arm-l').tagName.toLowerCase(), '手臂要是 <g>，線段跟手掌才能一起被動畫').toBe('g')
-    expect(svg.querySelector('.arm-r').tagName.toLowerCase()).toBe('g')
+    const img = el.querySelector('.boss-sprite .breath img.boss-img')
+    expect(img).not.toBeNull()
+    expect(img.getAttribute('src')).toBeTruthy()
 
     app.unmount()
     el.remove()
@@ -272,11 +254,9 @@ describe('BossSprite：不得引入任何外部資產（離線展場裝置，CSP
     // 這條鎖得到「有人把魔王換成一張 CDN 上的圖」這種改法：它在開發機上
     // 看起來好好的，到了展場的離線 iPad 上就是一塊空白，而且不會有錯誤訊息。
     expect(bossSpriteSource).not.toMatch(/https?:\/\//)
-    expect(bossSpriteSource).not.toMatch(/<img\b/)
-    expect(bossSpriteSource).not.toMatch(/url\(/)
     expect(bossSpriteSource).not.toMatch(/v-html/)
-    // 反向佐證：SVG 真的寫在 template 裡（不是這條斷言本身抓錯了對象）
-    expect(bossSpriteSource).toMatch(/<svg\b/)
+    // 圖片只准來自專案內的 import（打包後是同源 /assets/ 檔案），不得寫死外部網址
+    expect(bossSpriteSource).toMatch(/import bossUrl from '\.\.\/assets\//)
   })
 })
 
@@ -368,8 +348,7 @@ describe('BossSprite：prefers-reduced-motion 的分支真的存在，而且真�
     expect(body).toMatch(/\.boss-sprite\.charging\.attacking\s+\.stance/)
     expect(body).toMatch(/\.boss-sprite\.ultimate\s+\.stance/)
     expect(body).toMatch(/\.boss-sprite\.struck\s+\.hit\b/)
-    expect(body).toMatch(/\.boss-sprite\.attacking\s+\.arm-l/)
-    expect(body).toMatch(/\.boss-sprite\.attacking\s+\.arm-r/)
+    expect(body).toMatch(/\.breath/)
     expect(body).toMatch(/\.boss-sprite\.struck\s+\.hit-flash/)
     // 不得「完全沒有回饋」：蓄力（陷阱即將成立，小孩最需要看懂的那一格）
     // 必須留一個靜態的替代線索。
@@ -383,7 +362,7 @@ describe('BossSprite：prefers-reduced-motion 的分支真的存在，而且真�
     const css = styleOf(bossSpriteSource)
     const names = extractKeyframes(css).map((f) => f.name).sort()
     expect(names).toEqual([
-      'boss-attack', 'boss-attack-arm', 'boss-charge', 'boss-hit',
+      'boss-attack', 'boss-breath', 'boss-charge', 'boss-hit',
       'boss-hit-flash', 'boss-idle', 'boss-ultimate',
     ])
     expect(css).toMatch(/\.stance\s*\{[^}]*animation:\s*boss-idle/)
@@ -391,7 +370,7 @@ describe('BossSprite：prefers-reduced-motion 的分支真的存在，而且真�
     expect(css).toMatch(/\.boss-sprite\.attacking\s+\.stance\s*\{[^}]*animation:\s*boss-attack\s/)
     expect(css).toMatch(/\.boss-sprite\.ultimate\s+\.stance\s*\{[^}]*animation:\s*boss-ultimate/)
     expect(css).toMatch(/\.boss-sprite\.struck\s+\.hit\s*\{[^}]*animation:\s*boss-hit\s/)
-    expect(css).toMatch(/\.boss-sprite\.attacking\s+\.arm-l,?\s*\n?\s*\.boss-sprite\.attacking\s+\.arm-r\s*\{[^}]*animation:\s*boss-attack-arm/)
+    expect(css).toMatch(/\.breath\s*\{[^}]*animation:\s*boss-breath/)
     expect(css).toMatch(/\.boss-sprite\.struck\s+\.hit-flash\s*\{[^}]*animation:\s*boss-hit-flash/)
     // 蓄力中同時出手攻擊：身體要維持蓄力那一版動畫，不能被攻擊動畫蓋掉
     // （兩者可能同時成立，見上面「蓄力中同時出手攻擊」那條 class 並存測試）。
@@ -400,11 +379,8 @@ describe('BossSprite：prefers-reduced-motion 的分支真的存在，而且真�
 })
 
 describe('BossSprite：phase2 的臉部／裝飾變化真的寫在原始碼裡（不是只有 class 切換、CSS 規則其實沒接上）', () => {
-  it('角變大（scale，錨點對齊角的接點）、眉毛常駐、腮紅變濃這三條規則都存在', () => {
+  it('第二形態的外觀變化（色調）規則存在', () => {
     const css = styleOf(bossSpriteSource)
-    expect(css).toMatch(/\.boss-sprite\.phase2\s+\.horn\s+path:first-child\s*\{[^}]*transform:\s*scale/)
-    expect(css).toMatch(/\.boss-sprite\.phase2\s+\.horn\s+path:last-child\s*\{[^}]*transform:\s*scale/)
-    expect(css).toMatch(/\.boss-sprite\.phase2\s+\.brows\s*\{[^}]*opacity:\s*1/)
-    expect(css).toMatch(/\.boss-sprite\.phase2\s+\.blush\s*\{[^}]*opacity:/)
+    expect(css).toMatch(/\.boss-sprite\.phase2\s+\.boss-img\s*\{[^}]*filter:/)
   })
 })
