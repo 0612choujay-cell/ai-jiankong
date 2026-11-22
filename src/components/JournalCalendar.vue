@@ -16,8 +16,7 @@
         @click="pick(key(d))"
       >
         <b>{{ d }}</b>
-        <span v-for="e in (byDate[key(d)] ?? []).slice(0, 2)" :key="e.id" class="tag">{{ e.label }}</span>
-        <i v-if="byDate[key(d)]?.length > 2">+{{ byDate[key(d)].length - 2 }}</i>
+        <span v-for="e in (byDate[key(d)] ?? [])" :key="e.id" class="tag">{{ e.label }}</span>
       </button>
     </div>
 
@@ -120,7 +119,7 @@ watch(() => props.version, load)
 .bar .close { margin-left: 16px; font-size: var(--fs-body); padding: 0 16px; }
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; max-width: 46em; margin: 0 auto; }
 .wd { text-align: center; color: var(--c-text-dim); }
-.day { position: relative; aspect-ratio: 1; padding: 4px; border-radius: 10px; overflow: hidden; background: var(--c-surface); display: flex; flex-direction: column; align-items: flex-start; }
+.day { position: relative; min-height: 5.5em; padding: 4px; border-radius: 10px; background: var(--c-surface); display: flex; flex-direction: column; align-items: flex-start; }
 .day b { position: relative; z-index: 1; }
 .day i { position: absolute; right: 4px; bottom: 2px; z-index: 1; font-style: normal; font-weight: 700; }
 .day.on { outline: 3px solid currentColor; }
@@ -131,7 +130,7 @@ watch(() => props.version, load)
 .what { margin: 0 0 4px; font-weight: 700; }
 .when { margin: 0 0 8px; color: var(--c-text-dim); }
 .journal.embedded { position: static; z-index: auto; overflow: visible; padding: 0; background: transparent; margin: 16px auto; max-width: 46em; }
-.tag { position: relative; z-index: 1; font-size: 12px; line-height: 1.15; text-align: left; overflow: hidden; max-height: 2.3em; word-break: break-all; }
+.tag { position: relative; z-index: 1; font-size: 12px; line-height: 1.15; text-align: left; word-break: break-all; }
 .item { display: flex; justify-content: space-between; width: 100%; min-height: var(--tap-min); padding: 8px 16px; margin: 8px 0; border-radius: 12px; background: var(--c-surface); text-align: left; }
 .detail { max-width: 46em; margin: 16px auto; padding: 12px 16px; background: var(--c-surface); border-radius: 12px; }
 .detail .big { display: block; max-width: 100%; max-height: 60vh; margin: 12px auto; border-radius: 8px; }
