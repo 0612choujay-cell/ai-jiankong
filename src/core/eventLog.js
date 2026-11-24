@@ -17,7 +17,7 @@ export const EVENT_REASON_LABEL = {
   headTilt: '歪頭',
   gazeAway: '視線離開',
   drowsy: '疑似睡著／躺下',
-  phone: '看到手機',
+  phone: '看到分心的東西',
   leftPage: '離開頁面',
 }
 
@@ -29,7 +29,7 @@ export const EVENT_REASON_DETAIL = {
   headTilt: '歪頭：頭歪向一邊',
   gazeAway: '視線離開：眼睛沒有看前方',
   drowsy: '疑似睡著或躺下',
-  phone: '看到手機',
+  phone: '看到分心的東西',
   leftPage: '離開頁面：切到別的網頁或 App',
 }
 

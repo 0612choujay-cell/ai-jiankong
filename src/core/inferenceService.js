@@ -58,6 +58,17 @@ const STUDY_MIN_SCORE = 0.4
 const WRIST_L = 15
 const WRIST_R = 16
 
+/**
+ * 使用者的規則：水、鉛筆、書、紙以外的東西，只要出現在人的範圍內就算分心。
+ * COCO 沒有「鉛筆」「紙」這兩類，所以它們本來就不會被偵測成別的東西；下面是
+ * 「不算分心」的名單：喝的（瓶子、杯子）、書，加上人自己、桌椅這類每天都在畫面裡
+ * 的家具與場景（算它們分心，整場都會響）。其餘 COCO 類別一律算分心。
+ */
+const IGNORED_LABELS = Object.freeze([
+  'person', 'bottle', 'cup', 'wine glass', 'book',
+  'chair', 'couch', 'bed', 'dining table', 'bench', 'potted plant', 'vase',
+  'clock', 'toilet', 'sink', 'refrigerator', 'oven', 'microwave', 'toaster',
+])
 const DISTRACTING_LABELS = Object.freeze([
   'cell phone',
   'remote',
@@ -612,7 +623,7 @@ export function createInferenceService({ videoEl }) {
           // 下面的 bbox 只用來算一個面積比，算完就失去參照。
           const phoneVisible = (r?.detections ?? []).some((d) =>
             isBigEnough(d.boundingBox) && inPersonRegion(d.boundingBox, now) && (d.categories ?? []).some(
-              (c) => DISTRACTING_LABELS.includes(c.categoryName) && c.score >= PHONE_MIN_SCORE,
+              (c) => !IGNORED_LABELS.includes(c.categoryName) && c.score >= PHONE_MIN_SCORE,
             ))
           // 書／杯子／水瓶在人的範圍內：「正在做事」的訊號，同樣只回傳一個布林值。
           const studyItem = (r?.detections ?? []).some((d) =>

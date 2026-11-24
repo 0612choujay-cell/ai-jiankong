@@ -7,7 +7,7 @@
  * 手機一出現就響，之後每 PHONE_ALERT_REPEAT_MS 重複，直到手機離開畫面。
  * 仍然遵守角落的 🔊／🔇 開關（由呼叫端判斷）。
  */
-export const PHONE_ALERT_TEXT = '不要再滑了'
+export const PHONE_ALERT_TEXT = '不要分心'
 export const PHONE_ALERT_LANG = 'zh-TW'
 // 手機在畫面上就每隔這麼久再敲一次、再念一次，直到收起來為止。
 export const PHONE_ALERT_REPEAT_MS = 6000

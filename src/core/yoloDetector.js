@@ -15,8 +15,9 @@ const SIZE = 640
 const MIN_CANDIDATE = 0.25
 const NMS_IOU = 0.5
 
-// COCO 的類別 id → 名稱，只列我們會用到的（其餘不需要名稱）。
-const COCO_NAMES = { 39: 'bottle', 41: 'cup', 63: 'laptop', 65: 'remote', 67: 'cell phone', 73: 'book' }
+// COCO 80 類的 id → 名稱：使用者要求「水、鉛筆、書、紙以外的東西都算分心」，所以全部都要解。
+const COCO_CLASSES = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+const COCO_NAMES = Object.fromEntries(COCO_CLASSES.map((n, i) => [i, n]))
 
 function iou(a, b) {
   const x1 = Math.max(a.x, b.x)

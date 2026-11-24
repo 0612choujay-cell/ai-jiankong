@@ -22,12 +22,16 @@ describe('decodeYolo', () => {
     expect(out[0].categories[0]).toEqual({ categoryName: 'cell phone', score: expect.closeTo(0.8, 5) })
     expect(out[0].boundingBox).toEqual({ originX: 270, originY: 140, width: 100, height: 200 })
   })
-  it('ignores classes we do not use and low scores', () => {
+  it('ignores classes outside wantedIds and low scores', () => {
     const out = decodeYolo(tensor([
       { cx: 100, cy: 200, w: 50, h: 50, id: 0, score: 0.9 }, // person
       { cx: 300, cy: 300, w: 50, h: 50, id: 67, score: 0.1 },
-    ]), N, T)
+    ]), N, T, [67])
     expect(out).toEqual([])
+  })
+  it('decodes every COCO class by default (anything outside the allowed list counts as a distraction)', () => {
+    const out = decodeYolo(tensor([{ cx: 300, cy: 300, w: 100, h: 100, id: 76, score: 0.8 }]), N, T)
+    expect(out[0].categories[0].categoryName).toBe('scissors')
   })
   it('suppresses overlapping duplicates of the same class', () => {
     const out = decodeYolo(tensor([

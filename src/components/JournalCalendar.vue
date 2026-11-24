@@ -53,7 +53,12 @@
       </template>
       <template v-if="openEntry.events?.length">
         <h4>這次發生的事</h4>
-        <ul><li v-for="(t, i) in openEntry.events" :key="i">{{ t }}</li></ul>
+        <ul class="evs">
+          <li v-for="(t, i) in openEntry.events" :key="i">
+            <img v-if="t.photo" :src="t.photo" alt="" class="ev">
+            <span>{{ t.text ?? t }}</span>
+          </li>
+        </ul>
       </template>
       <template v-if="openEntry.axes?.length">
         <h4>五項表現</h4>
@@ -137,4 +142,7 @@ watch(() => props.version, load)
 .detail .result { font-weight: 700; }
 .detail .box { margin: 8px 0; }
 .back, .del { min-height: var(--tap-min); padding: 0 16px; }
+.evs { list-style: none; padding: 0; }
+.evs li { display: flex; gap: 12px; align-items: center; margin: 8px 0; }
+.evs .ev { width: 40%; max-height: 30vh; object-fit: contain; border-radius: 8px; }
 </style>

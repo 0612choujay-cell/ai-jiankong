@@ -144,7 +144,7 @@ function entrySnapshot() {
     headline: summary.value.headline,
     nextGoal: summary.value.nextGoal,
     improvements: improvements.value.map((it) => ({ label: it.label, count: it.count ?? 0, why: it.why, tips: [...it.tips] })),
-    events: props.events.map(describe),
+    events: props.events.map((e) => ({ text: describe(e), photo: e.photo ?? null })),
     axes: axes.value.map((a) => ({ label: a.label, value: a.value })),
     ...extra,
   }
